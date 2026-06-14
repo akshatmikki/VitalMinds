@@ -28,7 +28,7 @@ export default function LoginPage() {
     try {
       if (mode === 'signup') {
         const { error } = await supabase.auth.signUp({ email, password,
-          options: { emailRedirectTo: `${window.location.origin}/onboarding` }
+          options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding` }
         })
         if (error) throw error
         setMessage('Check your email to confirm your account!')
