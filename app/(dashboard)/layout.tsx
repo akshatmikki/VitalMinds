@@ -1,23 +1,27 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getUser, getProfile } from '@/lib/supabase/cached'
 import Sidebar from '@/components/ui/Sidebar'
+import MobileNav from '@/components/ui/MobileNav'
+import MobileHeader from '@/components/ui/MobileHeader'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles').select('*').eq('id', user.id).single()
+  const profile = await getProfile(user.id)
 
   if (profile && !profile.onboarding_done) redirect('/onboarding')
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="app-shell flex h-screen overflow-hidden">
       <Sidebar profile={profile} />
-      <main className="flex-1 overflow-y-auto">
-        {children}
-      </main>
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <MobileHeader profile={profile} />
+        <main className="flex-1 overflow-y-auto cyber-grid pb-16 md:pb-0">
+          {children}
+        </main>
+      </div>
+      <MobileNav />
     </div>
   )
 }

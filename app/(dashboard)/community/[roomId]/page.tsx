@@ -1,10 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
+import { getUser } from '@/lib/supabase/cached'
 import { notFound } from 'next/navigation'
 import RoomChat from '@/components/community/RoomChat'
 
 export default async function RoomPage({ params }: { params: { roomId: string } }) {
+  const user = await getUser()
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
 
   const [{ data: room }, { data: messages }, { data: profile }] = await Promise.all([
     supabase.from('rooms').select('*').eq('id', params.roomId).single(),

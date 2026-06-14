@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
+import { getUser } from '@/lib/supabase/cached'
 import HabitsClient from '@/components/habits/HabitsClient'
 
 export default async function HabitsPage() {
+  const user = await getUser()
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
   const today = new Date().toISOString().split('T')[0]
 
   const [{ data: habits }, { data: todayLogs }] = await Promise.all([

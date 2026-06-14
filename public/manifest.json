@@ -1,0 +1,10 @@
+{
+  "name": "VitalMind",
+  "short_name": "VitalMind",
+  "description": "AI-powered mental, physical, and emotional wellness.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#070d1f",
+  "theme_color": "#22c55e",
+  "icons": []
+}

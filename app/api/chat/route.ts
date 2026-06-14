@@ -10,13 +10,38 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return new Response('Unauthorized', { status: 401 })
 
-    const [{ data: profile }, { data: recentMoods }] = await Promise.all([
-      supabase.from('profiles').select('full_name,goals').eq('id', user.id).single(),
-      supabase.from('mood_logs').select('score,note').eq('user_id', user.id)
-        .order('logged_at', { ascending: false }).limit(3),
+    const today = new Date().toISOString().split('T')[0]
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000).toISOString().split('T')[0]
+
+    const [
+      { data: profile },
+      { data: recentMoods },
+      { data: healthMetrics },
+      { data: habits },
+      { data: todayHabitLogs },
+    ] = await Promise.all([
+      supabase.from('profiles').select('full_name, goals, height_cm').eq('id', user.id).single(),
+      supabase.from('mood_logs').select('score, note').eq('user_id', user.id)
+        .order('logged_at', { ascending: false }).limit(7),
+      supabase.from('health_metrics')
+        .select('date, sleep_hours, steps, water_ml, weight_kg')
+        .eq('user_id', user.id)
+        .gte('date', sevenDaysAgo)
+        .order('date', { ascending: false }),
+      supabase.from('habits').select('id, name').eq('user_id', user.id).eq('is_active', true),
+      supabase.from('habit_logs').select('habit_id').eq('user_id', user.id).eq('logged_date', today),
     ])
 
-    const systemPrompt = buildSystemPrompt(profile || {}, recentMoods || [], sessionType)
+    const systemPrompt = buildSystemPrompt(
+      profile || {},
+      recentMoods || [],
+      sessionType,
+      {
+        healthMetrics: healthMetrics || [],
+        habits: habits || [],
+        completedHabitIds: (todayHabitLogs || []).map((l: any) => l.habit_id),
+      }
+    )
 
     const stream = await groq.chat.completions.create({
       model: MODEL,
@@ -42,11 +67,12 @@ export async function POST(req: Request) {
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
 
-        // Save session asynchronously
         if (sessionId) {
-          const allMessages = [...messages, { role: 'assistant', content: fullText }]
+          const cleanedText = fullText.replace(/\n*QUICK_REPLIES:\s*[^\n]*$/m, '').trimEnd()
+          const allMessages = [...messages, { role: 'assistant', content: cleanedText }]
           await supabase.from('chat_sessions').upsert({
-            id: sessionId, user_id: user.id,
+            id: sessionId,
+            user_id: user.id,
             session_type: sessionType,
             messages: allMessages,
             title: allMessages[0]?.content?.slice(0, 60) || 'New conversation',

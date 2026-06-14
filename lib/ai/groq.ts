@@ -1,13 +1,28 @@
 import Groq from 'groq-sdk'
+import { calcWellnessScore, calcBMI } from '@/lib/health/calculations'
 
 export const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
 export const MODEL = 'llama-3.1-8b-instant'
 
-export function buildSystemPrompt(profile: {
-  full_name?: string
-  goals?: string[]
-}, recentMoods?: { score: number; note?: string }[], sessionType = 'companion') {
+type HealthContext = {
+  healthMetrics: Array<{
+    date: string
+    sleep_hours?: number | null
+    steps?: number | null
+    water_ml?: number | null
+    weight_kg?: number | null
+  }>
+  habits: Array<{ id: string; name: string }>
+  completedHabitIds: string[]
+}
+
+export function buildSystemPrompt(
+  profile: { full_name?: string; goals?: string[]; height_cm?: number | null },
+  recentMoods?: { score: number; note?: string | null }[],
+  sessionType = 'companion',
+  healthContext?: HealthContext
+) {
   const name = profile?.full_name || 'friend'
   const goals = profile?.goals?.join(', ') || 'general wellness'
   const moodSummary = recentMoods?.length
@@ -17,16 +32,56 @@ export function buildSystemPrompt(profile: {
   const personas: Record<string, string> = {
     companion: `You are Mind, a warm and empathetic AI wellness companion inside the VitalMind app.
 You help with mental health, loneliness, emotional support, and general life advice.
-You are NOT a replacement for professional therapy. If someone is in crisis, gently refer them to iCall India (9152987821) or Vandrevala Foundation (1860-2662-345).
-Be concise, warm, non-judgmental. Use simple language. Ask one follow-up question at a time.`,
+You are NOT a replacement for professional therapy. If someone is in crisis, gently refer them to iCall India (8445680090).
+Be conversational and genuinely curious. Ask ONE focused follow-up question per message to dig deeper into what the user is experiencing.
+Use their health data to ask targeted, personal questions (e.g. "I noticed your sleep has been off lately — could that be connected to how you're feeling?").
+Keep responses concise (3-5 sentences), warm, and non-judgmental.
+When it helps guide the conversation, end your response on a new line with exactly: QUICK_REPLIES: option1 | option2 | option3
+Each option must be under 6 words and feel like something the user would naturally say. Only include QUICK_REPLIES when they'd genuinely help — not every message.`,
 
     coach: `You are Mind, an encouraging health and fitness coach inside the VitalMind app.
-Give practical, actionable advice on physical health, exercise, sleep, nutrition, and habits.
-Be motivating but realistic. Personalize advice based on the user's goals and data.`,
+Start conversations by asking 1-2 clarifying questions to understand the user's fitness level, schedule, and constraints before giving advice.
+Reference their actual tracked data (steps, sleep, water, habits) to make feedback personal and specific.
+Give one clear, actionable tip or ask one targeted question per message — never overwhelm.
+Be motivating but realistic. Celebrate small wins, call out patterns, and hold them accountable gently.
+When offering choices or next steps, end your response on a new line with exactly: QUICK_REPLIES: option1 | option2 | option3
+Each option under 6 words.`,
 
     journal: `You are Mind, a reflective journaling guide inside the VitalMind app.
-Help the user explore their thoughts and feelings through guided questions.
-After they write, offer a brief compassionate reflection (2-3 sentences). Don't over-analyze.`,
+Guide users through deep self-reflection with thoughtful, open-ended questions.
+After they share something, reflect back what you heard in 1-2 sentences, then ask ONE deeper follow-up question to help them go further.
+Explore themes: what does this mean to them? what patterns do they notice? what would they tell a friend in this situation?
+Keep it gentle, spacious, non-directive. Don't rush to solutions.
+When it helps exploration, end your response on a new line with exactly: QUICK_REPLIES: option1 | option2 | option3
+Each option under 6 words.`,
+  }
+
+  let healthSummary = ''
+  if (healthContext && healthContext.healthMetrics.length > 0) {
+    const todayMetrics = healthContext.healthMetrics[0]
+    const scores = calcWellnessScore({
+      todayMetrics,
+      habits: healthContext.habits,
+      completedHabitIds: healthContext.completedHabitIds,
+      recentMoods: recentMoods ?? [],
+      sevenDayMetrics: healthContext.healthMetrics,
+    })
+
+    const bmi = calcBMI(todayMetrics.weight_kg, profile.height_cm)
+    const completedCount = healthContext.completedHabitIds.length
+    const totalHabits = healthContext.habits.length
+    const completedNames = healthContext.habits
+      .filter(h => healthContext.completedHabitIds.includes(h.id))
+      .map(h => h.name)
+
+    healthSummary = `
+Recent health data (last 7 days):
+- Wellness score: ${scores.overall}/100 (sleep ${scores.sleep}, steps ${scores.steps}, hydration ${scores.hydration}, habits ${scores.habits}, mood ${scores.mood})
+- Trend: ${scores.trend}
+- Most recent sleep: ${todayMetrics.sleep_hours != null ? `${todayMetrics.sleep_hours}h` : 'not logged'}
+- Most recent steps: ${todayMetrics.steps != null ? todayMetrics.steps.toLocaleString() : 'not logged'}
+- Most recent water: ${todayMetrics.water_ml != null ? `${todayMetrics.water_ml}ml` : 'not logged'}
+- Habits today: ${completedCount}/${totalHabits} completed${completedNames.length ? ` (${completedNames.join(', ')})` : ''}${bmi != null ? `\n- BMI: ${bmi}` : ''}`
   }
 
   return `${personas[sessionType] || personas.companion}
@@ -34,7 +89,7 @@ After they write, offer a brief compassionate reflection (2-3 sentences). Don't 
 User's name: ${name}
 User's wellness goals: ${goals}
 ${moodSummary}
-
+${healthSummary}
 Today's date: ${new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
 Always respond in English unless the user writes in another language.`
 }
