@@ -88,6 +88,19 @@ function calcTrend(sevenDayMetrics: HealthMetricRow[]): WellnessScoreBreakdown['
   return delta > 0 ? 'up' : 'down'
 }
 
+export function calcConnectionScore(inputs: {
+  communityMessagesSent: number
+  buddyConversations: number
+  journalSocialMentions: number
+  moodTrend: 'up' | 'down' | 'stable' | 'insufficient_data'
+}): number {
+  const messageScore  = Math.min(40, inputs.communityMessagesSent * 4)
+  const buddyScore    = Math.min(30, inputs.buddyConversations * 10)
+  const journalScore  = Math.min(20, inputs.journalSocialMentions * 5)
+  const moodBonus     = inputs.moodTrend === 'up' ? 10 : inputs.moodTrend === 'down' ? -10 : 0
+  return Math.max(0, Math.min(100, messageScore + buddyScore + journalScore + moodBonus))
+}
+
 export function calcWellnessScore(inputs: WellnessInputs): WellnessScoreBreakdown {
   const { todayMetrics, habits, completedHabitIds, recentMoods, sevenDayMetrics } = inputs
 

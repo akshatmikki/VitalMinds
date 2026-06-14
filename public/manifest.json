@@ -1,10 +1,16 @@
 {
   "name": "VitalMind",
   "short_name": "VitalMind",
-  "description": "AI-powered mental, physical, and emotional wellness.",
+  "description": "Your always-on companion for mind, body, and belonging.",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#070d1f",
-  "theme_color": "#22c55e",
-  "icons": []
+  "background_color": "#0f1623",
+  "theme_color": "#2B9E8A",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "categories": ["health", "lifestyle"],
+  "screenshots": []
 }

@@ -4,9 +4,10 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { format } from 'date-fns'
-import { Activity, TrendingUp } from 'lucide-react'
+import { Activity, TrendingUp, Utensils } from 'lucide-react'
 import type { WellnessScoreBreakdown } from '@/lib/health/calculations'
 import { getBMICategory } from '@/lib/health/calculations'
+import FoodCamera from '@/components/health/FoodCamera'
 
 const FIELDS = [
   { key: 'sleep_hours',   label: 'Sleep',        unit: 'hrs',   emoji: '😴', step: '0.5', min: '0',  max: '24',     placeholder: '7.5'  },
@@ -200,6 +201,22 @@ export default function HealthClient({ userId, todayMetrics, history, wellnessSc
         >
           {saved ? '✓ Saved!' : saving ? 'Saving…' : "Save today's metrics"}
         </button>
+      </div>
+
+      {/* Nutrition / food photo logging */}
+      <div className="glass rounded-2xl p-5 card-in stagger-3">
+        <div className="flex items-center gap-2 mb-3">
+          <Utensils className="w-4 h-4 text-amber-500" />
+          <h2 className="text-[11px] font-bold text-warm-500 uppercase tracking-widest">Nutrition Log</h2>
+        </div>
+        <p className="text-xs text-warm-400 mb-3">Snap a photo of your meal — AI estimates calories & macros instantly.</p>
+        <FoodCamera onLogged={async (entry) => {
+          const supabase = (await import('@/lib/supabase/client')).createClient()
+          const today = new Date().toISOString().split('T')[0]
+          const { data: existing } = await supabase.from('health_metrics').select('nutrition').eq('user_id', userId).eq('date', today).single()
+          const prev: any[] = existing?.nutrition ?? []
+          await supabase.from('health_metrics').upsert({ user_id: userId, date: today, nutrition: [...prev, entry] }, { onConflict: 'user_id,date' })
+        }} />
       </div>
 
       {/* Charts */}

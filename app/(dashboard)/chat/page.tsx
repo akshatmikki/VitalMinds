@@ -1,9 +1,10 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
-import { Send, Plus, Sparkles, Dumbbell, BookOpen, Clock, X, Zap } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { Send, Plus, Sparkles, Dumbbell, BookOpen, Clock, X, Zap, Mic, MicOff, Volume2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { formatDistanceToNow } from 'date-fns'
+import CrisisOverlay from '@/components/chat/CrisisOverlay'
 
 type Message = {
   role: 'user' | 'assistant'
@@ -52,6 +53,8 @@ function displayContent(content: string): string {
   return content.replace(/\n*QUICK_REPLIES:\s*[^\n]*$/, '').trimEnd()
 }
 
+type CrisisInfo = { crisis: boolean; severity: 'low' | 'medium' | 'high'; message: string }
+
 export default function ChatPage() {
   const [messages, setMessages]                 = useState<Message[]>([])
   const [input, setInput]                       = useState('')
@@ -61,8 +64,44 @@ export default function ChatPage() {
   const [sessions, setSessions]                 = useState<ChatSession[]>([])
   const [loadingSessions, setLoadingSessions]   = useState(false)
   const [historyOpen, setHistoryOpen]           = useState(false)
+  const [crisis, setCrisis]                     = useState<CrisisInfo | null>(null)
+  const [isListening, setIsListening]           = useState(false)
+  const [voiceSupported, setVoiceSupported]     = useState(false)
+  const recognitionRef = useRef<any>(null)
   const bottomRef   = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    setVoiceSupported(!!SpeechRecognition)
+  }, [])
+
+  function toggleVoice() {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognition) return
+
+    if (isListening) {
+      recognitionRef.current?.stop()
+      setIsListening(false)
+      return
+    }
+
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'en-US'
+    recognition.continuous = false
+    recognition.interimResults = false
+    recognitionRef.current = recognition
+
+    recognition.onresult = (e: any) => {
+      const transcript = e.results[0][0].transcript
+      setInput(prev => prev + (prev ? ' ' : '') + transcript)
+    }
+    recognition.onend = () => setIsListening(false)
+    recognition.onerror = () => setIsListening(false)
+
+    recognition.start()
+    setIsListening(true)
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -157,7 +196,14 @@ export default function ChatPage() {
           const data = line.slice(6)
           if (data === '[DONE]') break
           try {
-            const { text: chunk } = JSON.parse(data)
+            const parsed = JSON.parse(data)
+            // Handle crisis signal
+            if (parsed.crisis?.crisis) {
+              setCrisis(parsed.crisis)
+              continue
+            }
+            const chunk = parsed.text
+            if (!chunk) continue
             setMessages(prev => {
               const updated = [...prev]
               updated[updated.length - 1] = {
@@ -353,15 +399,33 @@ export default function ChatPage() {
             <div ref={bottomRef} />
           </div>
 
+          {/* Crisis overlay */}
+          {crisis && <CrisisOverlay crisis={crisis} onDismiss={() => setCrisis(null)} />}
+
           {/* Input */}
           <div className="chat-futuristic-input-bar">
             <div className="chat-fx-input-wrap">
+              {voiceSupported && (
+                <button
+                  type="button"
+                  aria-label={isListening ? 'Stop listening' : 'Voice input'}
+                  onClick={toggleVoice}
+                  className={cn(
+                    'p-2 rounded-lg transition-all border shrink-0',
+                    isListening
+                      ? 'text-red-400 border-red-500/30 bg-red-500/10 animate-pulse'
+                      : 'text-white/30 border-transparent hover:text-white/60 hover:bg-white/5'
+                  )}
+                >
+                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </button>
+              )}
               <textarea
                 ref={textareaRef}
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Type a message…"
+                placeholder={isListening ? 'Listening…' : 'Type or speak a message…'}
                 rows={1}
                 className="chat-fx-textarea"
               />

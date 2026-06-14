@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { groq, MODEL, buildSystemPrompt } from '@/lib/ai/groq'
+import { groq, MODEL, buildSystemPrompt, analyzeEmotion, detectCrisisSignals } from '@/lib/ai/groq'
+import { awardXP, updateStreak } from '@/lib/gamification'
 
 export const runtime = 'edge'
 
@@ -43,6 +44,10 @@ export async function POST(req: Request) {
       }
     )
 
+    // Crisis detection on the latest user message (non-blocking)
+    const lastUserMsg = messages[messages.length - 1]?.content ?? ''
+    const crisisResult = await detectCrisisSignals(lastUserMsg)
+
     const stream = await groq.chat.completions.create({
       model: MODEL,
       max_tokens: 800,
@@ -64,8 +69,34 @@ export async function POST(req: Request) {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`))
           }
         }
+        // Send crisis signal if detected (before [DONE])
+        if (crisisResult.crisis) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ crisis: crisisResult })}\n\n`))
+        }
+
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
+
+        // Fire-and-forget: emotion analysis + XP + streak (don't await in stream)
+        const lastAssistantText = fullText.replace(/\n*QUICK_REPLIES:\s*[^\n]*$/m, '').trimEnd()
+        analyzeEmotion(lastUserMsg).then(async (tags) => {
+          if (tags.length > 0 && sessionId) {
+            // Store emotion tags in the latest mood_log if one exists today
+            const today = new Date().toISOString().split('T')[0]
+            await supabase.from('mood_logs')
+              .update({ emotion_tags: tags })
+              .eq('user_id', user.id)
+              .gte('logged_at', today)
+              .order('logged_at', { ascending: false })
+              .limit(1)
+          }
+        }).catch(() => {})
+
+        // Award XP for chat session (first message of session only)
+        if (sessionId && messages.length === 1) {
+          awardXP(user.id, 'chat_session', supabase).catch(() => {})
+          updateStreak(user.id, supabase).catch(() => {})
+        }
 
         if (sessionId) {
           const cleanedText = fullText.replace(/\n*QUICK_REPLIES:\s*[^\n]*$/m, '').trimEnd()

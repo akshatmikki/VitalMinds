@@ -151,3 +151,104 @@ export async function generateJournalReflection(entry: string) {
   })
   return response.choices[0].message.content || ''
 }
+
+// Returns emotion tags array, e.g. ["joy","anxiety","loneliness"]
+export async function analyzeEmotion(text: string): Promise<string[]> {
+  if (!text || text.length < 10) return []
+  try {
+    const response = await groq.chat.completions.create({
+      model: MODEL,
+      max_tokens: 60,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an emotion classifier. Return ONLY a JSON array of emotion strings from this list: joy, sadness, anger, fear, anxiety, loneliness, gratitude, hope, frustration, calm, love, excitement. Maximum 3 emotions. No explanation, just the JSON array.'
+        },
+        { role: 'user', content: text.slice(0, 500) }
+      ]
+    })
+    const raw = response.choices[0].message.content?.trim() || '[]'
+    return JSON.parse(raw)
+  } catch {
+    return []
+  }
+}
+
+// Returns { crisis: boolean, severity: 'low'|'medium'|'high', message: string }
+export async function detectCrisisSignals(text: string): Promise<{ crisis: boolean; severity: 'low' | 'medium' | 'high'; message: string }> {
+  const NO_CRISIS = { crisis: false, severity: 'low' as const, message: '' }
+  if (!text || text.length < 5) return NO_CRISIS
+
+  // Fast keyword pre-screen before calling API
+  const lower = text.toLowerCase()
+  const crisisKeywords = ['suicid', 'kill myself', 'end my life', 'self harm', 'hurt myself', 'don\'t want to live', 'no reason to live', 'better off dead', 'want to die']
+  const hasCrisisKeyword = crisisKeywords.some(kw => lower.includes(kw))
+  if (!hasCrisisKeyword) return NO_CRISIS
+
+  try {
+    const response = await groq.chat.completions.create({
+      model: MODEL,
+      max_tokens: 80,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a mental health safety classifier. Return ONLY JSON: {"crisis": boolean, "severity": "low"|"medium"|"high"}. crisis=true means the text contains expressions of suicidal ideation, self-harm intent, or immediate danger. Be conservative — only flag genuine crisis signals, not sadness or frustration.'
+        },
+        { role: 'user', content: text.slice(0, 400) }
+      ]
+    })
+    const raw = response.choices[0].message.content?.trim() || '{}'
+    const result = JSON.parse(raw)
+    if (!result.crisis) return NO_CRISIS
+    return {
+      crisis: true,
+      severity: result.severity || 'medium',
+      message: result.severity === 'high'
+        ? 'Please reach out to a crisis line right now — iCall: 9152987821 (India) | 988 (US)'
+        : 'It sounds like you\'re going through something really hard. You don\'t have to face this alone.'
+    }
+  } catch {
+    return NO_CRISIS
+  }
+}
+
+export async function generateWeeklyInsight(data: {
+  userName: string
+  avgMood: number | null
+  avgSleep: number | null
+  habitsCompleted: number
+  totalHabits: number
+  journalCount: number
+  wellnessScore: number
+  topEmotions: string[]
+  moodTrend: 'up' | 'down' | 'stable'
+}): Promise<{ narrative: string; highlights: string[] }> {
+  try {
+    const response = await groq.chat.completions.create({
+      model: MODEL,
+      max_tokens: 400,
+      messages: [
+        {
+          role: 'system',
+          content: `You are VitalMind's weekly insight writer. Write a warm, personal "Your Week in Review" summary.
+Return ONLY JSON: { "narrative": "2-3 sentence personal narrative", "highlights": ["3 short bullet highlights, each under 12 words"] }
+Be specific with the numbers. Celebrate wins. One gentle nudge if something needs attention. Warm, human, never clinical.`
+        },
+        {
+          role: 'user',
+          content: `Name: ${data.userName}
+Avg mood: ${data.avgMood?.toFixed(1) ?? 'not logged'}/10 (trend: ${data.moodTrend})
+Avg sleep: ${data.avgSleep?.toFixed(1) ?? 'not logged'}h
+Habits: ${data.habitsCompleted}/${data.totalHabits} completed
+Journal entries: ${data.journalCount}
+Wellness score: ${data.wellnessScore}/100
+Top emotions this week: ${data.topEmotions.join(', ') || 'not detected'}`
+        }
+      ]
+    })
+    const raw = response.choices[0].message.content?.trim() || '{}'
+    return JSON.parse(raw)
+  } catch {
+    return { narrative: 'Keep going — every small step counts.', highlights: [] }
+  }
+}

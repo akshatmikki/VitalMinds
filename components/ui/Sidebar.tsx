@@ -5,8 +5,10 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import {
   Leaf, MessageCircle, LayoutDashboard, BookOpen,
-  CheckSquare, Activity, Users, LogOut, User
+  CheckSquare, Activity, Users, LogOut, User, BarChart2
 } from 'lucide-react'
+import NotificationBell from '@/components/ui/NotificationBell'
+import XPBar from '@/components/ui/XPBar'
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Overview',     icon: LayoutDashboard, accent: 'sage'     },
@@ -15,6 +17,7 @@ const NAV_ITEMS = [
   { href: '/habits',    label: 'Habits',       icon: CheckSquare,     accent: 'sage'     },
   { href: '/health',    label: 'Health',       icon: Activity,        accent: 'sage'     },
   { href: '/community', label: 'Community',    icon: Users,           accent: 'coral'    },
+  { href: '/reports',   label: 'Reports',      icon: BarChart2,       accent: 'lavender' },
 ]
 
 const ACCENT = {
@@ -41,7 +44,7 @@ const ACCENT = {
   },
 }
 
-export default function Sidebar({ profile }: { profile: any }) {
+export default function Sidebar({ profile, totalXP = 0 }: { profile: any; totalXP?: number }) {
   const pathname = usePathname()
   const router   = useRouter()
   const supabase = createClient()
@@ -57,16 +60,22 @@ export default function Sidebar({ profile }: { profile: any }) {
 
       {/* Logo */}
       <div className="p-5 border-b border-white/[.08]">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="sidebar-logo-icon w-9 h-9 rounded-xl flex items-center justify-center">
-              <Leaf className="w-4 h-4 text-white" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="sidebar-logo-icon w-9 h-9 rounded-xl flex items-center justify-center">
+                <Leaf className="w-4 h-4 text-white" />
+              </div>
+              <div className="sidebar-logo-blur absolute -inset-1 rounded-xl opacity-15 blur-sm" />
             </div>
-            <div className="sidebar-logo-blur absolute -inset-1 rounded-xl opacity-15 blur-sm" />
+            <span className="font-bold text-white tracking-wide text-[15px]">VitalMind</span>
           </div>
-          <span className="font-bold text-white tracking-wide text-[15px]">VitalMind</span>
+          <NotificationBell />
         </div>
       </div>
+
+      {/* XP progress bar */}
+      <XPBar totalXP={totalXP} />
 
       {/* User chip — click to open profile */}
       <Link

@@ -17,8 +17,17 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="VitalMind" />
+      </head>
       <body className={`${inter.className} bg-gray-50 text-gray-900 antialiased`}>
         {children}
+        <script dangerouslySetInnerHTML={{
+          __html: `if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})`
+        }} />
       </body>
     </html>
   )

@@ -22,7 +22,7 @@ export const getMoodLogs = cache(async (userId: string, days: number = 7) => {
   const since = new Date(Date.now() - days * 86_400_000).toISOString()
   const { data } = await supabase
     .from('mood_logs')
-    .select('score, energy, anxiety, note, logged_at')
+    .select('score, energy, anxiety, note, logged_at, emotion_tags')
     .eq('user_id', userId)
     .gte('logged_at', since)
     .order('logged_at', { ascending: false })

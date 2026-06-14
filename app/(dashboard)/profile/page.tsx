@@ -2,7 +2,8 @@ import { getUser, getProfile, getMoodLogs, getActiveHabits, getHabitLogs, getHea
 import { createClient } from '@/lib/supabase/server'
 import { calcWellnessScore } from '@/lib/health/calculations'
 import { getMoodEmoji, getMoodLabel } from '@/lib/utils'
-import { User, Target, Calendar, BookOpen, Smile, CheckSquare, Activity, Heart, Zap, TrendingUp } from 'lucide-react'
+import { User, Target, Calendar, BookOpen, Smile, CheckSquare, Activity, Heart, Zap, TrendingUp, Award } from 'lucide-react'
+import { getLevelInfo } from '@/lib/gamification'
 
 const GOAL_LABELS: Record<string, string> = {
   stress:       '🧘 Manage Stress',
@@ -29,6 +30,8 @@ export default async function ProfilePage() {
     { count: journalCount },
     { count: moodCount },
     { data: recentJournal },
+    { data: xpData },
+    { data: earnedBadges },
   ] = await Promise.all([
     getProfile(user!.id),
     getMoodLogs(user!.id, 30),
@@ -39,6 +42,9 @@ export default async function ProfilePage() {
     supabase.from('mood_logs').select('*', { count: 'exact', head: true }).eq('user_id', user!.id),
     supabase.from('journal_entries').select('id, title, created_at, mood_score')
       .eq('user_id', user!.id).order('created_at', { ascending: false }).limit(3),
+    supabase.from('user_xp').select('total_xp, level').eq('user_id', user!.id).single(),
+    supabase.from('user_badges').select('badge_id, earned_at, badge_definitions(name, emoji, description)')
+      .eq('user_id', user!.id).order('earned_at', { ascending: false }),
   ])
 
   const completedHabitIds = (habitLogs ?? []).map((l: any) => l.habit_id)
@@ -54,6 +60,8 @@ export default async function ProfilePage() {
   const avgMood = moodLogs30 && moodLogs30.length > 0
     ? moodLogs30.reduce((sum, l) => sum + l.score, 0) / moodLogs30.length
     : null
+
+  const levelInfo = getLevelInfo(xpData?.total_xp ?? 0)
 
   const memberSince = user?.created_at
     ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
@@ -240,6 +248,56 @@ export default async function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* ── XP & Level ──────────────────────────────── */}
+      <div className="glass rounded-2xl p-5 mb-5 card-in stagger-3">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-amber-500" />
+            <h2 className="text-[11px] font-semibold text-warm-500 uppercase tracking-widest">Level & XP</h2>
+          </div>
+          <span className="text-xs font-bold text-amber-600">{xpData?.total_xp ?? 0} XP</span>
+        </div>
+        <div className="flex items-center gap-3 mb-3">
+          <span className="text-2xl font-bold text-warm-900">{levelInfo.current.name}</span>
+          {levelInfo.next && (
+            <span className="text-sm text-warm-400">→ {levelInfo.next.name}</span>
+          )}
+        </div>
+        <div className="h-2 rounded-full bg-warm-100 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all duration-700"
+            style={{ width: `${levelInfo.progress}%` }}
+          />
+        </div>
+        {levelInfo.next && (
+          <p className="text-[11px] text-warm-400 mt-1.5">
+            {levelInfo.xpIntoLevel} / {levelInfo.xpNeeded} XP to {levelInfo.next.name}
+          </p>
+        )}
+      </div>
+
+      {/* ── Badges ──────────────────────────────────── */}
+      {earnedBadges && earnedBadges.length > 0 && (
+        <div className="glass rounded-2xl p-5 mb-5 card-in stagger-3">
+          <div className="flex items-center gap-2 mb-4">
+            <Award className="w-4 h-4 text-lavender-500" />
+            <h2 className="text-[11px] font-semibold text-warm-500 uppercase tracking-widest">
+              Badges Earned ({earnedBadges.length})
+            </h2>
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+            {earnedBadges.map((b: any) => (
+              <div key={b.badge_id} className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-lavender-50 border border-lavender-100 text-center">
+                <span className="text-2xl">{b.badge_definitions?.emoji ?? '🏅'}</span>
+                <span className="text-[10px] font-semibold text-lavender-700 leading-tight">
+                  {b.badge_definitions?.name ?? b.badge_id}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Today's habits snapshot ──────────────────── */}
       {habits.length > 0 && (

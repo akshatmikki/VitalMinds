@@ -1,16 +1,16 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, MessageCircle, BookOpen, CheckSquare, Activity, Users } from 'lucide-react'
+import { LayoutDashboard, MessageCircle, CheckSquare, Activity, Users, BarChart2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Home',    color: 'text-sage-600',     dot: 'bg-sage-500'     },
   { href: '/chat',      icon: MessageCircle,   label: 'Mind',    color: 'text-lavender-600', dot: 'bg-lavender-500' },
-  { href: '/journal',   icon: BookOpen,        label: 'Journal', color: 'text-lavender-600', dot: 'bg-lavender-500' },
   { href: '/habits',    icon: CheckSquare,     label: 'Habits',  color: 'text-sage-600',     dot: 'bg-sage-500'     },
   { href: '/health',    icon: Activity,        label: 'Health',  color: 'text-sage-600',     dot: 'bg-sage-500'     },
   { href: '/community', icon: Users,           label: 'Connect', color: 'text-coral-500',    dot: 'bg-coral-400'    },
+  { href: '/reports',   icon: BarChart2,       label: 'Reports', color: 'text-lavender-600', dot: 'bg-lavender-500' },
 ]
 
 export default function MobileNav() {

@@ -7,13 +7,14 @@ import { MessageCircle, BookOpen, Heart, Activity, TrendingUp } from 'lucide-rea
 
 import MoodChart from '@/components/mood/MoodChart'
 import QuickMoodLog from '@/components/mood/QuickMoodLog'
+import EmotionRadarChart from '@/components/mood/EmotionRadarChart'
 
 export default async function DashboardPage() {
   const user = await getUser()
   const supabase = createClient()
   const today = new Date().toISOString().split('T')[0]
 
-  const [profile, moodLogs, habits, habitLogs, healthMetrics, { data: recentJournal }] = await Promise.all([
+  const [profile, moodLogs, habits, habitLogs, healthMetrics, { data: recentJournal }, { data: streakData }] = await Promise.all([
     getProfile(user!.id),
     getMoodLogs(user!.id, 14),
     getActiveHabits(user!.id),
@@ -21,7 +22,15 @@ export default async function DashboardPage() {
     getHealthMetrics(user!.id, 7),
     supabase.from('journal_entries').select('id, title, created_at, mood_score')
       .eq('user_id', user!.id).order('created_at', { ascending: false }).limit(3),
+    supabase.from('wellness_streaks').select('current_streak, longest_streak').eq('user_id', user!.id).single(),
   ])
+
+  // Build emotion frequency map from recent mood logs
+  const emotionCounts: Record<string, number> = {}
+  ;(moodLogs as any[] ?? []).forEach((l: any) => {
+    const tags: string[] = l.emotion_tags ?? []
+    tags.forEach(t => { emotionCounts[t] = (emotionCounts[t] ?? 0) + 1 })
+  })
 
   const latestMood = moodLogs?.[0]
   const todayHabitLogs = habitLogs ?? []
@@ -129,6 +138,32 @@ export default async function DashboardPage() {
           <MoodChart data={moodLogs.slice().reverse()} />
         </div>
       )}
+
+      {/* ── Emotion radar + streak ─────────────────── */}
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="glass rounded-2xl p-5 card-in stagger-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Heart className="w-4 h-4 text-lavender-500" />
+            <h2 className="text-[11px] font-semibold text-warm-500 tracking-wide uppercase">Emotion Map</h2>
+          </div>
+          <EmotionRadarChart emotionCounts={emotionCounts} />
+        </div>
+
+        <div className="glass rounded-2xl p-5 card-in stagger-5 flex flex-col justify-between">
+          <div className="flex items-center gap-2 mb-3">
+            <Activity className="w-4 h-4 text-amber-500" />
+            <h2 className="text-[11px] font-semibold text-warm-500 tracking-wide uppercase">Wellness Streak</h2>
+          </div>
+          <div className="text-center py-4">
+            <p className="text-6xl font-black text-warm-900">{streakData?.current_streak ?? 0}</p>
+            <p className="text-sm text-warm-500 mt-1">day{(streakData?.current_streak ?? 0) !== 1 ? 's' : ''} in a row</p>
+            {(streakData?.longest_streak ?? 0) > 0 && (
+              <p className="text-xs text-warm-300 mt-2">Best: {streakData?.longest_streak} days</p>
+            )}
+          </div>
+          <p className="text-xs text-warm-400 text-center">Log a mood, habit, or chat today to keep your streak alive 🔥</p>
+        </div>
+      </div>
 
       {/* ── Quick actions ─────────────────────────── */}
       <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">

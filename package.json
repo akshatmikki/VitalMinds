@@ -9,33 +9,34 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^0.0.36",
+    "@anthropic-ai/sdk": "^0.104.1",
+    "@hookform/resolvers": "^3.9.0",
+    "@supabase/ssr": "^0.4.0",
+    "@supabase/supabase-js": "^2.44.4",
+    "ai": "^3.3.0",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
+    "framer-motion": "^11.3.19",
+    "groq-sdk": "^0.5.0",
+    "lucide-react": "^0.414.0",
     "next": "14.2.5",
     "react": "^18",
     "react-dom": "^18",
-    "@supabase/supabase-js": "^2.44.4",
-    "@supabase/ssr": "^0.4.0",
-    "ai": "^3.3.0",
-    "@ai-sdk/openai": "^0.0.36",
-    "groq-sdk": "^0.5.0",
-    "recharts": "^2.12.7",
-    "lucide-react": "^0.414.0",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.4.0",
     "react-hook-form": "^7.52.2",
-    "zod": "^3.23.8",
-    "@hookform/resolvers": "^3.9.0",
-    "date-fns": "^3.6.0",
-    "framer-motion": "^11.3.19"
+    "recharts": "^2.12.7",
+    "tailwind-merge": "^2.4.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "typescript": "^5",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
+    "autoprefixer": "^10.0.1",
     "eslint": "^8",
     "eslint-config-next": "14.2.5",
-    "autoprefixer": "^10.0.1"
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
   }
 }
