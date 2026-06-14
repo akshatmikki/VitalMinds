@@ -21,7 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="app-shell flex h-screen overflow-hidden">
       <Sidebar profile={profile} totalXP={xpData?.total_xp ?? 0} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <MobileHeader profile={profile} />
+        <MobileHeader profile={profile} totalXP={xpData?.total_xp ?? 0} />
         <main className="flex-1 overflow-y-auto cyber-grid pb-16 md:pb-0">
           {children}
         </main>

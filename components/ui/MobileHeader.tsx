@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Leaf, User, LogOut, KeyRound, History, X, ChevronRight, BookOpen, CheckSquare, Activity, Smile } from 'lucide-react'
+import { Leaf, User, LogOut, KeyRound, History, X, ChevronRight, BookOpen, CheckSquare, Activity, Smile, Zap } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useState, useRef, useEffect } from 'react'
 
@@ -12,7 +12,7 @@ const HISTORY_ITEMS = [
   { label: 'Moods',   href: '/dashboard', icon: Smile,       color: 'text-coral-400',    dot: 'bg-coral-400'    },
 ]
 
-export default function MobileHeader({ profile }: { profile: any }) {
+export default function MobileHeader({ profile, totalXP }: { profile: any; totalXP: number }) {
   const [open, setOpen]           = useState(false)
   const [resetSent, setResetSent] = useState(false)
   const [resetting, setResetting] = useState(false)
@@ -61,6 +61,14 @@ export default function MobileHeader({ profile }: { profile: any }) {
         </div>
         <span className="font-bold text-warm-900 text-[15px] tracking-wide">VitalMind</span>
       </Link>
+
+      {/* XP pill */}
+      <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200">
+        <Zap className="w-3 h-3 text-amber-500" />
+        <span className="text-[11px] font-bold text-amber-600 tabular-nums">
+          {totalXP >= 1000 ? `${(totalXP / 1000).toFixed(1)}k` : totalXP}
+        </span>
+      </div>
 
       {/* Profile dropdown */}
       <div className="relative" ref={wrapRef}>

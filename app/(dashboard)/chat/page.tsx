@@ -280,7 +280,7 @@ export default function ChatPage() {
 
       {/* Overlay for mobile history panel */}
       {historyOpen && (
-        <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={() => setHistoryOpen(false)} />
+        <div className="absolute inset-0 bg-black/50 z-30 md:hidden" onClick={() => setHistoryOpen(false)} />
       )}
 
       {/* ── History sidebar ─────────────────────────── */}
@@ -332,16 +332,16 @@ export default function ChatPage() {
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => setHistoryOpen(v => !v)}
                 title="Chat history"
-                className="p-1.5 rounded-lg text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors border border-transparent md:hidden">
+                className="p-1.5 rounded-lg text-warm-400 hover:text-warm-700 hover:bg-warm-100 transition-colors border border-transparent md:hidden">
                 <Clock className="w-4 h-4" />
               </button>
               <div className="flex items-center gap-2.5">
                 <div className="chat-fx-avatar-sm">
-                  <Sparkles className="w-3.5 h-3.5 text-teal-300" />
+                  <Sparkles className="w-3.5 h-3.5 text-sage-600" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold tracking-[0.2em] text-teal-400 uppercase">AI Wellness</p>
-                  <h1 className="font-bold text-white text-sm leading-tight">AI Companion</h1>
+                  <p className="text-[10px] font-bold tracking-[0.2em] text-sage-500 uppercase">AI Wellness</p>
+                  <h1 className="font-bold text-warm-900 text-sm leading-tight">AI Companion</h1>
                 </div>
                 <span className="chat-online-dot" />
               </div>
@@ -353,14 +353,14 @@ export default function ChatPage() {
                   onClick={() => { setSessionType(s.id); setMessages([]) }}
                   className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border',
                     sessionType === s.id
-                      ? 'bg-teal-500/15 text-teal-300 border-teal-500/30'
-                      : 'text-white/35 border-transparent hover:text-white/60 hover:bg-white/5')}>
+                      ? 'bg-sage-50 text-sage-600 border-sage-200'
+                      : 'text-warm-400 border-transparent hover:text-warm-700 hover:bg-warm-100')}>
                   <s.icon className="w-3 h-3" />
                   <span className="hidden sm:inline">{s.label}</span>
                 </button>
               ))}
               <button type="button" onClick={startNewSession}
-                className="p-1.5 rounded-lg text-white/35 hover:text-white/60 hover:bg-white/5 transition-colors border border-transparent ml-0.5"
+                className="p-1.5 rounded-lg text-warm-400 hover:text-warm-700 hover:bg-warm-100 transition-colors border border-transparent ml-0.5"
                 title="New chat">
                 <Plus className="w-4 h-4" />
               </button>
@@ -372,16 +372,16 @@ export default function ChatPage() {
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full text-center px-4 py-10">
                 <div className="chat-fx-avatar-lg mb-5">
-                  <currentSession.icon className="w-8 h-8 text-teal-300" />
+                  <currentSession.icon className="w-8 h-8 text-sage-600" />
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-1">{currentSession.label}</h2>
-                <p className="text-white/35 text-sm max-w-xs">{currentSession.desc}. I&apos;m here for you.</p>
+                <h2 className="text-2xl font-bold text-warm-900 mb-1">{currentSession.label}</h2>
+                <p className="text-warm-400 text-sm max-w-xs">{currentSession.desc}. I&apos;m here for you.</p>
 
                 <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md">
                   {STARTERS[sessionType].map(starter => (
                     <button key={starter} type="button" onClick={() => sendMessage(starter)}
                       className="chat-starter-chip text-left">
-                      <Zap className="w-3 h-3 shrink-0 text-teal-400 mt-0.5" />
+                      <Zap className="w-3 h-3 shrink-0 text-sage-500 mt-0.5" />
                       <span>{starter}</span>
                     </button>
                   ))}
@@ -445,8 +445,8 @@ export default function ChatPage() {
                   className={cn(
                     'p-2 rounded-lg transition-all border shrink-0',
                     isListening
-                      ? 'text-red-400 border-red-500/30 bg-red-500/10 animate-pulse'
-                      : 'text-white/30 border-transparent hover:text-white/60 hover:bg-white/5'
+                      ? 'text-red-500 border-red-300/50 bg-red-50 animate-pulse'
+                      : 'text-warm-400 border-transparent hover:text-warm-600 hover:bg-warm-100'
                   )}
                 >
                   {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
@@ -463,7 +463,7 @@ export default function ChatPage() {
                   className="chat-fx-textarea w-full"
                 />
                 {interimText && (
-                  <p className="absolute bottom-full left-0 mb-1 text-xs text-teal-400/70 italic truncate max-w-full pointer-events-none">
+                  <p className="absolute bottom-full left-0 mb-1 text-xs text-sage-500/80 italic truncate max-w-full pointer-events-none">
                     {interimText}…
                   </p>
                 )}
@@ -475,9 +475,9 @@ export default function ChatPage() {
               </button>
             </div>
             {voiceError && (
-              <p className="text-[10px] text-center text-red-400/80 mt-1.5">{voiceError}</p>
+              <p className="text-[10px] text-center text-red-500 mt-1.5">{voiceError}</p>
             )}
-            <p className="text-[10px] text-center text-white/18 mt-1.5">
+            <p className="text-[10px] text-center text-warm-400 mt-1.5">
               Mind is AI, not a therapist. Crisis? Call iCall: 9152987821
             </p>
           </div>

@@ -22,24 +22,24 @@ const NAV_ITEMS = [
 
 const ACCENT = {
   sage: {
-    text:   'text-sage-400',
-    bg:     'bg-sage-500/[.15]',
-    border: 'border-sage-500/[.30]',
-    bar:    'bg-sage-400',
+    text:   'text-sage-600',
+    bg:     'bg-sage-50',
+    border: 'border-sage-200',
+    bar:    'bg-sage-500',
     shadow: 'shadow-sage',
   },
   lavender: {
-    text:   'text-lavender-400',
-    bg:     'bg-lavender-500/[.15]',
-    border: 'border-lavender-500/[.30]',
-    bar:    'bg-lavender-400',
+    text:   'text-lavender-600',
+    bg:     'bg-lavender-50',
+    border: 'border-lavender-200',
+    bar:    'bg-lavender-500',
     shadow: 'shadow-lavender',
   },
   coral: {
-    text:   'text-coral-400',
-    bg:     'bg-coral-500/[.15]',
-    border: 'border-coral-500/[.30]',
-    bar:    'bg-coral-400',
+    text:   'text-coral-600',
+    bg:     'bg-coral-50',
+    border: 'border-coral-200',
+    bar:    'bg-coral-500',
     shadow: 'shadow-coral',
   },
 }
@@ -59,7 +59,7 @@ export default function Sidebar({ profile, totalXP = 0 }: { profile: any; totalX
     <aside className="sidebar hidden md:flex w-60 flex-col h-full shrink-0">
 
       {/* Logo */}
-      <div className="p-5 border-b border-white/[.08]">
+      <div className="p-5 border-b border-warm-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -68,7 +68,7 @@ export default function Sidebar({ profile, totalXP = 0 }: { profile: any; totalX
               </div>
               <div className="sidebar-logo-blur absolute -inset-1 rounded-xl opacity-15 blur-sm" />
             </div>
-            <span className="font-bold text-white tracking-wide text-[15px]">VitalMind</span>
+            <span className="font-bold text-warm-900 tracking-wide text-[15px]">VitalMind</span>
           </div>
           <NotificationBell />
         </div>
@@ -81,21 +81,21 @@ export default function Sidebar({ profile, totalXP = 0 }: { profile: any; totalX
       <Link
         href="/profile"
         className={cn(
-          'px-4 py-3.5 border-b border-white/[.08] flex items-center gap-3 transition-all duration-200 group hover:bg-white/[.05]',
-          pathname === '/profile' && 'bg-white/[.06]'
+          'px-4 py-3.5 border-b border-warm-200 flex items-center gap-3 transition-all duration-200 group hover:bg-warm-50',
+          pathname === '/profile' && 'bg-warm-50'
         )}
       >
         <div className="relative shrink-0">
           <div className="sidebar-avatar w-9 h-9 rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 text-sage-400" />
+            <User className="w-4 h-4 text-sage-600" />
           </div>
-          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-sage-400 rounded-full border-2 border-[#111827]" />
+          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-sage-500 rounded-full border-2 border-white" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-white truncate group-hover:text-sage-300 transition-colors">
+          <p className="text-sm font-semibold text-warm-900 truncate group-hover:text-sage-600 transition-colors">
             {profile?.full_name || 'You'}
           </p>
-          <p className="text-[11px] text-sage-400 tracking-wide font-medium uppercase">View profile</p>
+          <p className="text-[11px] text-sage-500 tracking-wide font-medium uppercase">View profile</p>
         </div>
       </Link>
 
@@ -113,7 +113,7 @@ export default function Sidebar({ profile, totalXP = 0 }: { profile: any; totalX
                 'relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group border',
                 active
                   ? cn(colors.bg, colors.border, colors.text, colors.shadow)
-                  : 'text-white/60 hover:text-white hover:bg-white/[.08] border-transparent'
+                  : 'text-warm-500 hover:text-warm-900 hover:bg-warm-100 border-transparent'
               )}
             >
               {active && (
@@ -122,7 +122,7 @@ export default function Sidebar({ profile, totalXP = 0 }: { profile: any; totalX
               <Icon
                 className={cn(
                   'w-4 h-4 shrink-0 transition-colors duration-200',
-                  active ? colors.text : 'text-white/40 group-hover:text-white/70'
+                  active ? colors.text : 'text-warm-400 group-hover:text-warm-700'
                 )}
               />
               {label}
@@ -132,13 +132,13 @@ export default function Sidebar({ profile, totalXP = 0 }: { profile: any; totalX
       </nav>
 
       {/* Sign out */}
-      <div className="p-3 border-t border-white/[.08]">
+      <div className="p-3 border-t border-warm-200">
         <button
           type="button"
           onClick={signOut}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/50 hover:text-coral-400 hover:bg-coral-500/[.10] border border-transparent hover:border-coral-500/[.30] transition-all duration-200 w-full group"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-warm-500 hover:text-coral-600 hover:bg-coral-50 border border-transparent hover:border-coral-200 transition-all duration-200 w-full group"
         >
-          <LogOut className="w-4 h-4 group-hover:text-coral-400 transition-colors" />
+          <LogOut className="w-4 h-4 group-hover:text-coral-600 transition-colors" />
           Sign out
         </button>
       </div>
