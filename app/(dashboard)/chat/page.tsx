@@ -67,6 +67,8 @@ export default function ChatPage() {
   const [crisis, setCrisis]                     = useState<CrisisInfo | null>(null)
   const [isListening, setIsListening]           = useState(false)
   const [voiceSupported, setVoiceSupported]     = useState(false)
+  const [voiceError, setVoiceError]             = useState('')
+  const [interimText, setInterimText]           = useState('')
   const recognitionRef = useRef<any>(null)
   const bottomRef   = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -83,22 +85,52 @@ export default function ChatPage() {
     if (isListening) {
       recognitionRef.current?.stop()
       setIsListening(false)
+      setInterimText('')
       return
     }
 
     const recognition = new SpeechRecognition()
     recognition.lang = 'en-US'
-    recognition.continuous = false
-    recognition.interimResults = false
+    recognition.continuous = true
+    recognition.interimResults = true
     recognitionRef.current = recognition
 
     recognition.onresult = (e: any) => {
-      const transcript = e.results[0][0].transcript
-      setInput(prev => prev + (prev ? ' ' : '') + transcript)
+      let interim = ''
+      let final = ''
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) {
+          final += e.results[i][0].transcript
+        } else {
+          interim += e.results[i][0].transcript
+        }
+      }
+      if (interim) setInterimText(interim)
+      if (final) {
+        setInput(prev => prev + (prev ? ' ' : '') + final.trim())
+        setInterimText('')
+      }
     }
-    recognition.onend = () => setIsListening(false)
-    recognition.onerror = () => setIsListening(false)
 
+    recognition.onend = () => {
+      setIsListening(false)
+      setInterimText('')
+    }
+
+    recognition.onerror = (e: any) => {
+      setIsListening(false)
+      setInterimText('')
+      if (e.error === 'not-allowed' || e.error === 'permission-denied') {
+        setVoiceError('Microphone blocked — allow access in browser settings.')
+      } else if (e.error === 'network') {
+        setVoiceError('Network error. Check your connection.')
+      } else if (e.error !== 'no-speech') {
+        setVoiceError('Voice input failed. Please try again.')
+      }
+      setTimeout(() => setVoiceError(''), 4000)
+    }
+
+    setVoiceError('')
     recognition.start()
     setIsListening(true)
   }
@@ -420,22 +452,32 @@ export default function ChatPage() {
                   {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                 </button>
               )}
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={isListening ? 'Listening…' : 'Type or speak a message…'}
-                rows={1}
-                className="chat-fx-textarea"
-              />
+              <div className="flex-1 relative">
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={isListening ? 'Listening…' : 'Type or speak a message…'}
+                  rows={1}
+                  className="chat-fx-textarea w-full"
+                />
+                {interimText && (
+                  <p className="absolute bottom-full left-0 mb-1 text-xs text-teal-400/70 italic truncate max-w-full pointer-events-none">
+                    {interimText}…
+                  </p>
+                )}
+              </div>
               <button type="button" aria-label="Send message" onClick={() => sendMessage()}
                 disabled={!input.trim() || loading}
                 className="chat-fx-send">
                 <Send className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-[10px] text-center text-white/18 mt-2.5">
+            {voiceError && (
+              <p className="text-[10px] text-center text-red-400/80 mt-1.5">{voiceError}</p>
+            )}
+            <p className="text-[10px] text-center text-white/18 mt-1.5">
               Mind is AI, not a therapist. Crisis? Call iCall: 9152987821
             </p>
           </div>

@@ -53,11 +53,12 @@ export default function HealthClient({ userId, todayMetrics, history, wellnessSc
     water_ml:      todayMetrics?.water_ml      || '',
     weight_kg:     todayMetrics?.weight_kg     || '',
   })
-  const [saving, setSaving]       = useState(false)
-  const [saved,  setSaved]        = useState(false)
-  const [height, setHeight]       = useState(currentHeight ? String(currentHeight) : '')
-  const [savingH, setSavingH]     = useState(false)
-  const [savedH,  setSavedH]      = useState(false)
+  const [saving, setSaving]           = useState(false)
+  const [saved,  setSaved]            = useState(false)
+  const [height, setHeight]           = useState(currentHeight ? String(currentHeight) : '')
+  const [savingH, setSavingH]         = useState(false)
+  const [savedH,  setSavedH]          = useState(false)
+  const [nutritionEntries, setNutritionEntries] = useState<any[]>(todayMetrics?.nutrition ?? [])
 
   const supabase = createClient()
   const router   = useRouter()
@@ -210,13 +211,29 @@ export default function HealthClient({ userId, todayMetrics, history, wellnessSc
           <h2 className="text-[11px] font-bold text-warm-500 uppercase tracking-widest">Nutrition Log</h2>
         </div>
         <p className="text-xs text-warm-400 mb-3">Snap a photo of your meal — AI estimates calories & macros instantly.</p>
-        <FoodCamera onLogged={async (entry) => {
-          const supabase = (await import('@/lib/supabase/client')).createClient()
-          const today = new Date().toISOString().split('T')[0]
-          const { data: existing } = await supabase.from('health_metrics').select('nutrition').eq('user_id', userId).eq('date', today).single()
-          const prev: any[] = existing?.nutrition ?? []
-          await supabase.from('health_metrics').upsert({ user_id: userId, date: today, nutrition: [...prev, entry] }, { onConflict: 'user_id,date' })
-        }} />
+        <FoodCamera
+          entries={nutritionEntries}
+          onLogged={async (entry) => {
+            const updated = [...nutritionEntries, entry]
+            setNutritionEntries(updated)
+            const supabase = (await import('@/lib/supabase/client')).createClient()
+            const today = new Date().toISOString().split('T')[0]
+            await supabase.from('health_metrics').upsert(
+              { user_id: userId, date: today, nutrition: updated },
+              { onConflict: 'user_id,date' },
+            )
+          }}
+          onDelete={async (index) => {
+            const updated = nutritionEntries.filter((_, i) => i !== index)
+            setNutritionEntries(updated)
+            const supabase = (await import('@/lib/supabase/client')).createClient()
+            const today = new Date().toISOString().split('T')[0]
+            await supabase.from('health_metrics').upsert(
+              { user_id: userId, date: today, nutrition: updated },
+              { onConflict: 'user_id,date' },
+            )
+          }}
+        />
       </div>
 
       {/* Charts */}
