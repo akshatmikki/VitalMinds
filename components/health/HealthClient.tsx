@@ -8,6 +8,7 @@ import { Activity, TrendingUp, Utensils } from 'lucide-react'
 import type { WellnessScoreBreakdown } from '@/lib/health/calculations'
 import { getBMICategory } from '@/lib/health/calculations'
 import FoodCamera from '@/components/health/FoodCamera'
+import WearableConnect from '@/components/health/WearableConnect'
 
 const FIELDS = [
   { key: 'sleep_hours',   label: 'Sleep',        unit: 'hrs',   emoji: '😴', step: '0.5', min: '0',  max: '24',     placeholder: '7.5'  },
@@ -43,9 +44,11 @@ type Props = {
   wellnessScore: WellnessScoreBreakdown
   bmi: number | null
   currentHeight: number | null
+  wearableConnected: boolean
+  wearableLastSynced: string | null
 }
 
-export default function HealthClient({ userId, todayMetrics, history, wellnessScore, bmi, currentHeight }: Props) {
+export default function HealthClient({ userId, todayMetrics, history, wellnessScore, bmi, currentHeight, wearableConnected, wearableLastSynced }: Props) {
   const [form, setForm] = useState({
     sleep_hours:   todayMetrics?.sleep_hours   || '',
     sleep_quality: todayMetrics?.sleep_quality || '',
@@ -117,6 +120,15 @@ export default function HealthClient({ userId, todayMetrics, history, wellnessSc
         <p className="text-[10px] font-bold tracking-[0.2em] text-sage-500 uppercase mb-1">Body Metrics</p>
         <h1 className="text-2xl font-bold text-warm-900">Health Tracking</h1>
         <p className="text-warm-400 text-sm mt-0.5">Log today&apos;s metrics</p>
+      </div>
+
+      {/* Wearable connect card */}
+      <div className="mb-6">
+        <WearableConnect
+          connected={wearableConnected}
+          lastSynced={wearableLastSynced}
+          onSynced={() => window.location.reload()}
+        />
       </div>
 
       {/* Wellness score card */}

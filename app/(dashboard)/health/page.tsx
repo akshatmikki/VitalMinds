@@ -8,13 +8,14 @@ export default async function HealthPage() {
   const supabase = createClient()
   const today = new Date().toISOString().split('T')[0]
 
-  const [{ data: todayMetrics }, { data: history }, habits, habitLogs, profile] = await Promise.all([
+  const [{ data: todayMetrics }, { data: history }, habits, habitLogs, profile, { data: wearableConn }] = await Promise.all([
     supabase.from('health_metrics').select('*').eq('user_id', user!.id).eq('date', today).single(),
     supabase.from('health_metrics').select('*').eq('user_id', user!.id)
       .order('date', { ascending: false }).limit(14),
     getActiveHabits(user!.id),
     getHabitLogs(user!.id, today),
     getProfile(user!.id),
+    supabase.from('wearable_connections').select('last_synced_at').eq('user_id', user!.id).eq('provider', 'google_fit').single(),
   ])
 
   const completedHabitIds = habitLogs.map((l: any) => l.habit_id)
@@ -37,6 +38,8 @@ export default async function HealthPage() {
       wellnessScore={wellnessScore}
       bmi={bmi}
       currentHeight={profile?.height_cm ?? null}
+      wearableConnected={!!wearableConn}
+      wearableLastSynced={wearableConn?.last_synced_at ?? null}
     />
   )
 }
