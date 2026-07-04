@@ -1,7 +1,24 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const PROTECTED_PREFIXES = [
+  '/chat', '/dashboard', '/journal', '/habits',
+  '/health', '/community', '/profile', '/reports',
+]
+
+const AUTH_PREFIXES = ['/login', '/onboarding', '/reset-password']
+
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  const isProtected = PROTECTED_PREFIXES.some(p => pathname.startsWith(p))
+  const isAuthPage  = AUTH_PREFIXES.some(p => pathname.startsWith(p))
+
+  // Fast path — neither protected nor auth page, skip Supabase entirely
+  if (!isProtected && !isAuthPage) {
+    return NextResponse.next()
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -21,22 +38,15 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // Use getSession (cookie-only, no network round-trip) for redirect decisions.
+  // Full token validation happens in server components via getUser().
+  const { data: { session } } = await supabase.auth.getSession()
 
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/onboarding')
-  const isProtected = request.nextUrl.pathname.startsWith('/chat') ||
-    request.nextUrl.pathname.startsWith('/dashboard') ||
-    request.nextUrl.pathname.startsWith('/journal') ||
-    request.nextUrl.pathname.startsWith('/habits') ||
-    request.nextUrl.pathname.startsWith('/health') ||
-    request.nextUrl.pathname.startsWith('/community')
-
-  if (!user && isProtected) {
+  if (!session && isProtected) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (user && isAuthPage && !request.nextUrl.pathname.startsWith('/onboarding')) {
+  if (session && isAuthPage && !pathname.startsWith('/onboarding')) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
@@ -44,5 +54,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|api|auth).*)'],
+  // Exclude static files, images, API routes, and auth callback from middleware
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|icon-|sw.js|manifest.json|api/|auth/).*)'],
 }
