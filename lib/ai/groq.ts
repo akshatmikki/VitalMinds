@@ -212,6 +212,115 @@ export async function detectCrisisSignals(text: string): Promise<{ crisis: boole
   }
 }
 
+export async function generateLessonContent(lesson: {
+  title: string
+  courseTitle: string
+  courseCategory: string
+  lessonType: string
+  orderIndex: number
+  totalLessons: number
+}): Promise<string> {
+  const typeGuide = {
+    read: 'Write an educational lesson with clear sections, practical examples, and key takeaways. Use markdown headings and bullet points.',
+    exercise: 'Write a step-by-step guided exercise with clear instructions. Include what to do, how long, and what to notice. Practical and actionable.',
+    reflection: 'Write a reflection prompt with guiding questions and a short explanation. Help the reader go deep. Include a journaling exercise at the end.',
+  }[lesson.lessonType] || 'Write an educational lesson.'
+
+  const response = await groq.chat.completions.create({
+    model: MODEL,
+    max_tokens: 800,
+    messages: [
+      {
+        role: 'system',
+        content: `You are a mental wellness educator writing content for the VitalMind app.
+Write engaging, evidence-based, warm content. No fluff. Be specific and practical.
+Use markdown formatting (##, ###, -, **bold**).
+${typeGuide}
+Keep total length to 400-600 words. This is lesson ${lesson.orderIndex} of ${lesson.totalLessons} in the "${lesson.courseTitle}" course.`
+      },
+      {
+        role: 'user',
+        content: `Write the full lesson content for: "${lesson.title}"
+Course: ${lesson.courseTitle} (${lesson.courseCategory} wellness)
+Lesson type: ${lesson.lessonType}`
+      }
+    ]
+  })
+  return response.choices[0].message.content || ''
+}
+
+export async function generatePersonalizedPlan(params: {
+  name: string
+  goals: string[]
+  focusAreas: string[]
+  durationDays: number
+  avgMood: number
+  avgSleep: number
+  habitCompletion: number
+}): Promise<{
+  title: string
+  description: string
+  week_theme: string
+  weekly_tip: string
+  days: Array<{
+    day_number: number
+    day_label: string
+    tasks: Array<{
+      time_of_day: string
+      task: string
+      category: string
+      duration_min: number
+    }>
+  }>
+} | null> {
+  const daysLabel = params.durationDays === 7 ? '7-day' : params.durationDays === 14 ? '14-day' : '21-day'
+
+  const response = await groq.chat.completions.create({
+    model: MODEL,
+    max_tokens: 2500,
+    messages: [
+      {
+        role: 'system',
+        content: `You are a personalized wellness plan generator for VitalMind.
+Return ONLY valid JSON matching this exact shape (no markdown, no explanation):
+{
+  "title": "short plan name",
+  "description": "1 sentence describing this plan",
+  "week_theme": "this week's theme in 4-6 words",
+  "weekly_tip": "one powerful practical tip",
+  "days": [
+    {
+      "day_number": 1,
+      "day_label": "Day 1 – Monday",
+      "tasks": [
+        { "time_of_day": "Morning", "task": "specific task", "category": "physical|mental|social|sleep|nutrition", "duration_min": 10 }
+      ]
+    }
+  ]
+}
+Generate exactly ${params.durationDays} days. Each day should have 3-4 tasks across Morning/Afternoon/Evening.
+Make tasks specific, actionable, and progressively building. Vary categories daily.`
+      },
+      {
+        role: 'user',
+        content: `Create a ${daysLabel} personalized wellness plan.
+Name: ${params.name || 'User'}
+Goals: ${params.goals.join(', ') || 'general wellness'}
+Focus areas: ${params.focusAreas.join(', ')}
+Current stats: avg mood ${params.avgMood}/10, avg sleep ${params.avgSleep}h, habit completion ${params.habitCompletion}%
+Start date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`
+      }
+    ]
+  })
+
+  try {
+    const raw = response.choices[0].message.content?.trim() || 'null'
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
 export async function generateWeeklyInsight(data: {
   userName: string
   avgMood: number | null

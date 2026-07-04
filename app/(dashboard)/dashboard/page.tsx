@@ -8,13 +8,14 @@ import { MessageCircle, BookOpen, Heart, Activity, TrendingUp } from 'lucide-rea
 import MoodChart from '@/components/mood/MoodChart'
 import QuickMoodLog from '@/components/mood/QuickMoodLog'
 import EmotionRadarChart from '@/components/mood/EmotionRadarChart'
+import WellnessPanel from '@/components/wellness/WellnessPanel'
 
 export default async function DashboardPage() {
   const user = await getUser()
   const supabase = createClient()
   const today = new Date().toISOString().split('T')[0]
 
-  const [profile, moodLogs, habits, habitLogs, healthMetrics, { data: recentJournal }, { data: streakData }] = await Promise.all([
+  const [profile, moodLogs, habits, habitLogs, healthMetrics, { data: recentJournal }, { data: streakData }, { data: todayMetric }] = await Promise.all([
     getProfile(user!.id),
     getMoodLogs(user!.id, 14),
     getActiveHabits(user!.id),
@@ -23,6 +24,7 @@ export default async function DashboardPage() {
     supabase.from('journal_entries').select('id, title, created_at, mood_score')
       .eq('user_id', user!.id).order('created_at', { ascending: false }).limit(3),
     supabase.from('wellness_streaks').select('current_streak, longest_streak').eq('user_id', user!.id).single(),
+    supabase.from('health_metrics').select('water_ml').eq('user_id', user!.id).eq('date', today).single(),
   ])
 
   // Build emotion frequency map from recent mood logs
@@ -210,6 +212,9 @@ export default async function DashboardPage() {
           <div className="absolute bottom-4 right-5 text-sage-200 text-5xl font-black select-none">🌿</div>
         </Link>
       </div>
+
+      {/* ── Interactive wellness tools ───────────── */}
+      <WellnessPanel userId={user!.id} today={today} waterMl={todayMetric?.water_ml ?? 0} />
 
       {/* ── Recent journal ───────────────────────── */}
       {recentJournal && recentJournal.length > 0 && (
