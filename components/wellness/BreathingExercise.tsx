@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Wind, X, Play, Pause, RotateCcw } from 'lucide-react'
+import Portal from '@/components/ui/Portal'
 
 type Pattern = {
   name: string
@@ -112,11 +113,12 @@ export default function BreathingExercise() {
 
       <AnimatePresence>
         {open && (
+          <Portal>
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
             onClick={e => { if (e.target === e.currentTarget) { stop(); setOpen(false) } }}
           >
             <motion.div
@@ -210,6 +212,7 @@ export default function BreathingExercise() {
               </div>
             </motion.div>
           </motion.div>
+          </Portal>
         )}
       </AnimatePresence>
     </>

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { X, Sparkles, Loader2, Zap } from 'lucide-react'
+import Portal from '@/components/ui/Portal'
 
 const FOCUS_OPTIONS = [
   { id: 'anxiety',       label: 'Reduce Anxiety',    emoji: '🌊' },
@@ -67,11 +68,12 @@ export default function GeneratePlanModal() {
 
       <AnimatePresence>
         {open && (
+          <Portal>
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
             onClick={e => { if (e.target === e.currentTarget && !generating) setOpen(false) }}
           >
             <motion.div
@@ -164,6 +166,7 @@ export default function GeneratePlanModal() {
               </div>
             </motion.div>
           </motion.div>
+          </Portal>
         )}
       </AnimatePresence>
     </>
