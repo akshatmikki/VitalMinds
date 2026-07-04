@@ -52,7 +52,7 @@ export default async function CoursePage({ params }: { params: { slug: string } 
       <CourseDetailClient
         courseId={course.id}
         lessons={lessons}
-        completedLessonIds={[...completedLessonIds]}
+        completedLessonIds={Array.from(completedLessonIds)}
         userId={user!.id}
       />
     </div>
