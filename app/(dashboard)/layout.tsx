@@ -18,11 +18,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .from('user_xp').select('total_xp').eq('user_id', user.id).single()
 
   return (
-    <div className="app-shell flex h-screen overflow-hidden">
+    <div className="app-shell flex h-screen">
       <Sidebar profile={profile} totalXP={xpData?.total_xp ?? 0} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <MobileHeader profile={profile} totalXP={xpData?.total_xp ?? 0} />
-        <main className="flex-1 overflow-y-auto cyber-grid pb-16 md:pb-0">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden cyber-grid pb-20 md:pb-0">
           {children}
         </main>
       </div>
