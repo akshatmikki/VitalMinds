@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     durationDays: 7 | 14 | 21
   }
 
-  // Fetch user context
+  // Fetch user context (failures are non-fatal — we fall back to defaults)
   const [{ data: profile }, { data: moods }, { data: healthMetrics }, { data: habits }, { data: habitLogs }] = await Promise.all([
     supabase.from('profiles').select('full_name, goals').eq('id', user.id).single(),
     supabase.from('mood_logs').select('score').eq('user_id', user.id).order('logged_at', { ascending: false }).limit(14),
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     habitCompletion,
   })
 
-  if (!planData) return NextResponse.json({ error: 'Generation failed' }, { status: 500 })
+  if (!planData) return NextResponse.json({ error: 'AI generation failed — check GROQ_API_KEY' }, { status: 500 })
 
   // Save plan
   const { data: plan, error: planErr } = await supabase
@@ -52,30 +52,41 @@ export async function POST(req: NextRequest) {
       description: planData.description,
       duration_days: durationDays,
       focus_areas: focusAreas,
-      week_theme: planData.week_theme,
-      weekly_tip: planData.weekly_tip,
+      week_theme: planData.week_theme ?? null,
+      weekly_tip: planData.weekly_tip ?? null,
       status: 'active',
       start_date: new Date().toISOString().split('T')[0],
     })
     .select()
     .single()
 
-  if (planErr || !plan) return NextResponse.json({ error: 'DB insert failed' }, { status: 500 })
+  if (planErr || !plan) {
+    console.error('wellness_plans insert error:', planErr)
+    return NextResponse.json({
+      error: 'DB insert failed',
+      detail: planErr?.message ?? 'unknown',
+      hint: planErr?.hint ?? '',
+      code: planErr?.code ?? '',
+    }, { status: 500 })
+  }
 
   // Save tasks
   const tasks = planData.days.flatMap(day =>
-    day.tasks.map(t => ({
+    (day.tasks ?? []).map(t => ({
       plan_id: plan.id,
       day_number: day.day_number,
       day_label: day.day_label,
       time_of_day: t.time_of_day,
       task: t.task,
       category: t.category,
-      duration_min: t.duration_min,
+      duration_min: t.duration_min ?? 10,
     }))
   )
 
-  await supabase.from('plan_tasks').insert(tasks)
+  if (tasks.length > 0) {
+    const { error: tasksErr } = await supabase.from('plan_tasks').insert(tasks)
+    if (tasksErr) console.error('plan_tasks insert error:', tasksErr)
+  }
 
   return NextResponse.json({ planId: plan.id })
 }
