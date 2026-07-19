@@ -8,6 +8,10 @@ import { MessageCircle, BookOpen, Heart, Activity, TrendingUp } from 'lucide-rea
 import MoodChart from '@/components/mood/MoodChart'
 import QuickMoodLog from '@/components/mood/QuickMoodLog'
 import EmotionRadarChart from '@/components/mood/EmotionRadarChart'
+import EmotionalWeather from '@/components/mood/EmotionalWeather'
+import MoodPrediction from '@/components/mood/MoodPrediction'
+import SmartInsights from '@/components/dashboard/SmartInsights'
+import GratitudeJar from '@/components/wellness/GratitudeJar'
 import WellnessPanel from '@/components/wellness/WellnessPanel'
 
 export default async function DashboardPage() {
@@ -165,6 +169,22 @@ export default async function DashboardPage() {
           </div>
           <p className="text-xs text-warm-400 text-center">Log a mood, habit, or chat today to keep your streak alive 🔥</p>
         </div>
+      </div>
+
+      {/* ── Emotional weather + Mood prediction ──── */}
+      {moodLogs && moodLogs.length >= 3 && (() => {
+        const avg = moodLogs.slice(0, 7).reduce((s: number, m: any) => s + m.score, 0) / Math.min(moodLogs.length, 7)
+        return (
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <EmotionalWeather avgScore={Math.round(avg * 10) / 10} trend={wellnessScore.trend} />
+            <MoodPrediction />
+          </div>
+        )
+      })()}
+
+      {/* ── Smart insights ───────────────────────── */}
+      <div className="mt-4">
+        <SmartInsights />
       </div>
 
       {/* ── Quick actions ─────────────────────────── */}

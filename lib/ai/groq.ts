@@ -321,6 +321,97 @@ Start date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: '
   }
 }
 
+export async function predictTomorrowMood(data: {
+  recentMoods: { score: number; date: string; emotion_tags?: string[] }[]
+  avgSleep: number
+  habitCompletion: number
+  dayOfWeek: string
+}): Promise<{ score: number; confidence: 'low' | 'medium' | 'high'; reason: string; tip: string }> {
+  try {
+    const response = await groq.chat.completions.create({
+      model: MODEL,
+      max_tokens: 150,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a mood prediction model. Analyse patterns and predict tomorrow's mood score.
+Return ONLY JSON: { "score": number 1-10, "confidence": "low"|"medium"|"high", "reason": "1 short sentence why", "tip": "1 actionable tip to improve it" }
+Base prediction on: day-of-week patterns, sleep quality, habit consistency, recent mood trend.`,
+        },
+        {
+          role: 'user',
+          content: `Recent moods (newest first): ${data.recentMoods.map(m => `${m.date}: ${m.score}/10`).join(', ')}
+Average sleep: ${data.avgSleep}h | Habit completion: ${data.habitCompletion}% | Tomorrow is: ${data.dayOfWeek}`,
+        },
+      ],
+    })
+    return JSON.parse(response.choices[0].message.content?.trim() ?? '{}')
+  } catch {
+    return { score: 6, confidence: 'low', reason: 'Not enough data yet.', tip: 'Log your mood daily for better predictions.' }
+  }
+}
+
+export async function generatePersonalInsights(data: {
+  moodLogs: { score: number; logged_at: string; emotion_tags?: string[] }[]
+  sleepData: { date: string; sleep_hours: number | null }[]
+  habitLogs: { logged_date: string }[]
+  habits: { name: string }[]
+}): Promise<{ insight: string; type: 'pattern' | 'win' | 'nudge'; icon: string }[]> {
+  try {
+    const response = await groq.chat.completions.create({
+      model: MODEL,
+      max_tokens: 500,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a personal wellness analyst. Detect meaningful patterns in the user's data.
+Return ONLY a JSON array of 4-5 insights:
+[{ "insight": "specific observation in 1-2 sentences", "type": "pattern"|"win"|"nudge", "icon": "single emoji" }]
+Types: "pattern" = data correlation discovered, "win" = something they did well, "nudge" = gentle improvement suggestion.
+Be specific and personal — reference actual numbers. No generic advice.`,
+        },
+        {
+          role: 'user',
+          content: `Mood data (last 14 days): ${JSON.stringify(data.moodLogs.slice(0, 14).map(m => ({ score: m.score, date: m.logged_at.split('T')[0], emotions: m.emotion_tags })))}
+Sleep data: ${JSON.stringify(data.sleepData.map(d => ({ date: d.date, hours: d.sleep_hours })))}
+Habits tracked: ${data.habits.map(h => h.name).join(', ')}
+Habit log dates: ${Array.from(new Set(data.habitLogs.map(l => l.logged_date))).sort().slice(-14).join(', ')}`,
+        },
+      ],
+    })
+    return JSON.parse(response.choices[0].message.content?.trim() ?? '[]')
+  } catch {
+    return []
+  }
+}
+
+export async function generateChatRecap(messages: { role: string; content: string }[]): Promise<{
+  recap: string
+  themes: string[]
+  mood_shift: string
+}> {
+  try {
+    const response = await groq.chat.completions.create({
+      model: MODEL,
+      max_tokens: 300,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a compassionate session note-taker. Summarise this wellness chat session.
+Return ONLY JSON: { "recap": "2-3 sentence warm summary of what was explored", "themes": ["up to 3 theme words"], "mood_shift": "improved"|"stable"|"needs attention" }`,
+        },
+        {
+          role: 'user',
+          content: `Session transcript:\n${messages.slice(-20).map(m => `${m.role}: ${m.content}`).join('\n')}`,
+        },
+      ],
+    })
+    return JSON.parse(response.choices[0].message.content?.trim() ?? '{}')
+  } catch {
+    return { recap: 'A meaningful conversation.', themes: [], mood_shift: 'stable' }
+  }
+}
+
 export async function generateWeeklyInsight(data: {
   userName: string
   avgMood: number | null
