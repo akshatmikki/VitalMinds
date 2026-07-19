@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, MessageCircle, CheckSquare, Activity, Users, BarChart2, GraduationCap, Map } from 'lucide-react'
+import { LayoutDashboard, MessageCircle, CheckSquare, Activity, Users, BarChart2, GraduationCap, Map, Gamepad2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: '/community', icon: Users,           label: 'Connect', color: 'text-coral-500',    dot: 'bg-coral-400'    },
   { href: '/learn',     icon: GraduationCap,   label: 'Courses', color: 'text-amber-600',    dot: 'bg-amber-500'    },
   { href: '/plans',     icon: Map,             label: 'Plans',   color: 'text-amber-600',    dot: 'bg-amber-500'    },
+  { href: '/games',     icon: Gamepad2,        label: 'Games',   color: 'text-coral-600',    dot: 'bg-coral-500'    },
   { href: '/reports',   icon: BarChart2,       label: 'Reports', color: 'text-lavender-600', dot: 'bg-lavender-500' },
 ]
 

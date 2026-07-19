@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import {
   Leaf, MessageCircle, LayoutDashboard, BookOpen,
-  CheckSquare, Activity, Users, LogOut, User, BarChart2, GraduationCap, Map
+  CheckSquare, Activity, Users, LogOut, User, BarChart2, GraduationCap, Map, Gamepad2
 } from 'lucide-react'
 import NotificationBell from '@/components/ui/NotificationBell'
 import XPBar from '@/components/ui/XPBar'
@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { href: '/reports',   label: 'Reports',      icon: BarChart2,       accent: 'lavender' },
   { href: '/learn',     label: 'Courses',      icon: GraduationCap,   accent: 'amber'    },
   { href: '/plans',     label: 'My Plans',     icon: Map,             accent: 'amber'    },
+  { href: '/games',     label: 'Wellness Games', icon: Gamepad2,      accent: 'coral'    },
 ]
 
 const ACCENT = {
