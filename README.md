@@ -94,6 +94,19 @@ npx cap open ios     # opens the project in Xcode (macOS only)
 - **Android**: works fully on Windows/Linux/macOS. Requires [Android Studio](https://developer.android.com/studio). From Android Studio you can run on an emulator or a USB-connected device, and later build a signed release for the Play Console.
 - **iOS**: requires **Xcode, which only runs on macOS**. If you're on Windows, you'll need either a Mac, a cloud Mac build service (e.g. Codemagic, Ionic Appflow), or a colleague's machine to open `ios/App/App.xcworkspace`, run `pod install` (the CLI already tried once and skipped it since CocoaPods isn't installed on this machine), and produce a signed build.
 
+### Building without a Mac or Android Studio (GitHub Actions)
+
+Two workflows in `.github/workflows/` build installable app files on GitHub's own servers — nothing to install locally beyond the app itself:
+
+- **`android-build.yml`** — builds a debug **APK** on a Linux runner. Every push to `main` that touches `android/`, `capacitor.config.ts`, or `package.json` (or a manual run from the Actions tab) produces a `vitalmind-debug-apk` artifact. Download it, transfer to an Android phone, and tap to install (allow "install from unknown sources" the first time).
+- **`ios-build.yml`** — builds an **unsigned `.ipa`** on a macOS runner (Apple provides these — Xcode comes preinstalled, no Mac purchase needed). It can't produce a directly-installable app on its own because there's no Apple Developer account wired into CI for code signing. Instead:
+  1. Download the `vitalmind-unsigned-ipa` artifact from the workflow run.
+  2. Install [Sideloadly](https://sideloadly.io) (free, Windows/macOS) on your computer.
+  3. Connect your iPhone via USB, drag the `.ipa` into Sideloadly, sign in with your Apple ID when prompted (this happens locally in Sideloadly, using the same free-tier personal-signing mechanism Xcode itself uses), and install.
+  4. Free Apple ID signing expires after **7 days** — re-run the same Sideloadly steps on the existing `.ipa` to reinstall, no rebuild needed unless the app itself changed.
+
+  If you'd rather have a properly signed build with a 1-year expiry (and a path to TestFlight later), get an Apple Developer Program membership ($99/yr) and let me know — the workflow can be extended to sign in CI once you have a distribution certificate, provisioning profile, and your device's UDID registered.
+
 ### App store prerequisites (not something the CLI can do for you)
 - **Apple Developer Program** — $99/year, needed for TestFlight and App Store submission.
 - **Google Play Console** — $25 one-time, needed for Play Store submission.

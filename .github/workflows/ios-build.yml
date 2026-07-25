@@ -1,0 +1,66 @@
+name: Build iOS (unsigned)
+
+# Builds an UNSIGNED .ipa on a GitHub-hosted macOS runner (Xcode
+# preinstalled — no Mac needed on your end). There's no Apple Developer
+# account wired in, so this can't produce a signed, directly-installable
+# app the way the Android workflow does. Instead, sign/install the
+# downloaded .ipa yourself with Sideloadly (https://sideloadly.io, free,
+# runs on Windows) using your own Apple ID, over USB. Re-sign every ~7
+# days — that's a free-tier Apple ID limitation, not something this
+# workflow can avoid.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - 'capacitor.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ios-build.yml'
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync Capacitor native project
+        run: npx cap sync ios
+
+      - name: Install CocoaPods dependencies
+        working-directory: ios/App
+        run: pod install
+
+      - name: Build unsigned .app
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
+      - name: Package as unsigned .ipa
+        run: |
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -r VitalMind-unsigned.ipa Payload
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitalmind-unsigned-ipa
+          path: VitalMind-unsigned.ipa
