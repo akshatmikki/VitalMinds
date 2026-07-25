@@ -79,7 +79,7 @@ npm install @capacitor/ios @capacitor/android
 npx cap add ios
 npx cap add android
 ```
-This created the `ios/` and `android/` native project folders (commit these) and `capacitor.config.ts`, `out/` (a placeholder `webDir` — required by the CLI, but its contents are never actually shown since `server.url` takes over immediately).
+This created the `ios/` and `android/` native project folders (commit these) and `capacitor.config.ts`, plus `www/` (a placeholder `webDir`, committed — required by the CLI so `npx cap sync` works on a fresh clone or in CI, but its contents are never actually shown since `server.url` takes over immediately).
 
 ### Updating `capacitor.config.ts`
 `server.url` points at `https://vital-minds.vercel.app`. If the production domain ever changes, update it there. For testing against a local dev server on a physical device, temporarily set `server.url` to `http://<your-LAN-IP>:3000` while `npm run dev` is running (your phone and computer need to be on the same network), then change it back before shipping.

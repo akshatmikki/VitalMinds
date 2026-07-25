@@ -6,11 +6,14 @@ import type { CapacitorConfig } from '@capacitor/cli';
 // live Vercel deployment (`server.url`) — the native shell behaves like a
 // dedicated browser window over the real, already-working site. `webDir`
 // still needs to exist for the CLI's tooling, but its contents are never
-// shown once `server.url` takes over.
+// shown once `server.url` takes over. It points at `www/` (committed)
+// rather than Next.js's own `out/` (gitignored build output) so `npx cap
+// sync` works on a fresh clone or in CI, not just on a machine that
+// happens to have a stray `out/` directory lying around.
 const config: CapacitorConfig = {
   appId: 'com.vitalmind.app',
   appName: 'VitalMind',
-  webDir: 'out',
+  webDir: 'www',
   server: {
     url: 'https://vital-minds.vercel.app',
     cleartext: false,
