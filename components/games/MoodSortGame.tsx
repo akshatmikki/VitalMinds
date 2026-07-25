@@ -1,8 +1,10 @@
 'use client'
-// Emotional Literacy — sort emotion words into Positive / Neutral / Challenging buckets
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+// Emotional Literacy — drag emotion words into Positive / Neutral / Challenging buckets
+import { useEffect, useRef, useState } from 'react'
+import { motion, AnimatePresence, type PanInfo } from 'framer-motion'
 import { CheckCircle2, RefreshCw } from 'lucide-react'
+import { playSound } from '@/lib/sound'
+import { hapticSuccess, hapticTap } from '@/lib/haptics'
 
 type Emotion = { word: string; correct: 'positive' | 'neutral' | 'challenging' }
 
@@ -36,17 +38,36 @@ const BUCKET = {
 function shuffle<T>(a: T[]) { return [...a].sort(() => Math.random() - 0.5) }
 
 export default function MoodSortGame() {
-  const [emotions, setEmotions] = useState(() => shuffle(ALL_EMOTIONS.slice(0, 10)))
+  // Deterministic on first render (matches SSR output), shuffled client-side
+  // after mount — shuffling in the initializer would desync server/client
+  // random output and trigger a hydration mismatch.
+  const [emotions, setEmotions] = useState<Emotion[]>(() => ALL_EMOTIONS.slice(0, 10))
   const [current, setCurrent]   = useState(0)
   const [score, setScore]       = useState(0)
   const [feedback, setFeedback] = useState<{ correct: boolean; bucket: Bucket } | null>(null)
+  const [hoverBucket, setHoverBucket] = useState<Bucket | null>(null)
   const [done, setDone]         = useState(false)
+
+  const bucketRefs = useRef<Partial<Record<Bucket, HTMLButtonElement>>>({})
+
+  useEffect(() => { setEmotions(shuffle(ALL_EMOTIONS.slice(0, 10))) }, [])
+
+  function bucketAt(point: { x: number; y: number }): Bucket | null {
+    for (const b of Object.keys(BUCKET) as Bucket[]) {
+      const el = bucketRefs.current[b]
+      if (!el) continue
+      const r = el.getBoundingClientRect()
+      if (point.x >= r.left && point.x <= r.right && point.y >= r.top && point.y <= r.bottom) return b
+    }
+    return null
+  }
 
   function guess(bucket: Bucket) {
     if (feedback) return
     const correct = emotions[current].correct === bucket
     setFeedback({ correct, bucket })
-    if (correct) setScore(s => s + 1)
+    if (correct) { setScore(s => s + 1); playSound('success'); hapticSuccess() }
+    else { playSound('error'); hapticTap() }
     setTimeout(() => {
       setFeedback(null)
       if (current + 1 >= emotions.length) { setDone(true) }
@@ -54,9 +75,19 @@ export default function MoodSortGame() {
     }, 900)
   }
 
+  function handleDrag(_e: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) {
+    setHoverBucket(bucketAt(info.point))
+  }
+
+  function handleDragEnd(_e: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) {
+    setHoverBucket(null)
+    const bucket = bucketAt(info.point)
+    if (bucket) guess(bucket)
+  }
+
   function restart() {
     setEmotions(shuffle(ALL_EMOTIONS.slice(0, 10)))
-    setCurrent(0); setScore(0); setFeedback(null); setDone(false)
+    setCurrent(0); setScore(0); setFeedback(null); setHoverBucket(null); setDone(false)
   }
 
   const emotion = emotions[current]
@@ -67,7 +98,7 @@ export default function MoodSortGame() {
       <div className="flex items-center justify-between mb-3">
         <div>
           <p className="text-xs font-bold text-lavender-700">🎭 Emotion Sorter</p>
-          <p className="text-[10px] text-lavender-400">Build emotional vocabulary</p>
+          <p className="text-[10px] text-lavender-400">Drag the word into a bucket</p>
         </div>
         <button onClick={restart} className="p-1.5 rounded-lg bg-lavender-100 text-lavender-500 hover:bg-lavender-200 transition-all">
           <RefreshCw className="w-3.5 h-3.5" />
@@ -92,7 +123,7 @@ export default function MoodSortGame() {
         </motion.div>
       ) : (
         <>
-          {/* Emotion word */}
+          {/* Emotion word — draggable */}
           <AnimatePresence mode="wait">
             <motion.div
               key={current}
@@ -102,7 +133,18 @@ export default function MoodSortGame() {
               className="text-center mb-4"
             >
               <p className="text-[10px] text-lavender-400 mb-1">{current + 1} of {emotions.length}</p>
-              <p className="text-2xl font-black text-lavender-800">{emotion?.word}</p>
+              <motion.p
+                drag={!feedback}
+                dragSnapToOrigin
+                dragElastic={0.2}
+                dragMomentum={false}
+                whileDrag={{ scale: 1.12, rotate: 3 }}
+                onDrag={handleDrag}
+                onDragEnd={handleDragEnd}
+                className="text-2xl font-black text-lavender-800 inline-block px-2 touch-none select-none cursor-grab active:cursor-grabbing"
+              >
+                {emotion?.word}
+              </motion.p>
               {feedback && (
                 <motion.p
                   initial={{ opacity: 0 }}
@@ -115,17 +157,22 @@ export default function MoodSortGame() {
             </motion.div>
           </AnimatePresence>
 
-          {/* Buckets */}
+          {/* Buckets — drop targets, still tappable directly */}
           <div className="grid grid-cols-3 gap-2">
             {(Object.keys(BUCKET) as Bucket[]).map(b => {
               const style = BUCKET[b]
               const selected = feedback?.bucket === b
+              const hovered = hoverBucket === b
               return (
                 <motion.button
                   key={b}
+                  ref={el => { bucketRefs.current[b] = el ?? undefined }}
                   whileTap={{ scale: 0.95 }}
+                  animate={hovered ? { scale: 1.06 } : { scale: 1 }}
                   onClick={() => guess(b)}
-                  className={`p-2.5 rounded-xl text-center border-2 transition-all text-[10px] font-bold ${style.bg} ${style.text} ${style.drop} ${
+                  className={`p-2.5 rounded-xl text-center border-2 transition-colors text-[10px] font-bold ${style.bg} ${style.text} ${style.drop} ${
+                    hovered ? 'ring-2 ring-offset-1 ring-lavender-400' : ''
+                  } ${
                     selected
                       ? feedback?.correct ? 'ring-2 ring-sage-400' : 'ring-2 ring-rose-400'
                       : ''

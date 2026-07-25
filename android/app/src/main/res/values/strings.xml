@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">VitalMind</string>
+    <string name="title_activity_main">VitalMind</string>
+    <string name="package_name">com.vitalmind.app</string>
+    <string name="custom_url_scheme">com.vitalmind.app</string>
+</resources>

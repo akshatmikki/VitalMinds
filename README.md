@@ -15,6 +15,7 @@ Your AI-powered mental, physical, and emotional wellness companion. Built with N
 - **Database:** Supabase (Postgres + Auth + Realtime)
 - **AI:** Groq API (free) with Llama 3.1
 - **Deployment:** Vercel (free Hobby plan)
+- **Mobile:** Capacitor (native iOS/Android shell over the live web app — see [Mobile app](#mobile-app-ios--android-via-capacitor))
 
 ## Cost: $0
 - Vercel Hobby: free
@@ -59,6 +60,44 @@ Open [http://localhost:3000](http://localhost:3000)
 npx vercel
 ```
 Add your environment variables in the Vercel dashboard.
+
+---
+
+## Mobile app (iOS / Android via Capacitor)
+
+The app ships as a native shell via [Capacitor](https://capacitorjs.com) that loads the **live Vercel deployment** (`server.url` in `capacitor.config.ts`) instead of a bundled static build. This is deliberate: the app relies on Next.js Server Actions, middleware-based Supabase auth, and dynamic API routes, none of which survive a static export (`next export`/`output: 'export'`). The native app is effectively a dedicated browser window over the real site, which means:
+
+- Every web change ships to the native apps automatically the moment it's deployed to Vercel — no native rebuild needed for ordinary feature work.
+- A native rebuild (`npx cap sync`) is only needed when you change `capacitor.config.ts`, add/update a Capacitor plugin, or change native assets (icons, splash screen).
+- Native APIs (haptics on the games in `components/games/`, status bar styling, splash screen) are wired through `lib/haptics.ts` and `components/NativeInit.tsx` — both feature-detect `Capacitor.isNativePlatform()` and no-op harmlessly in the regular web app.
+
+### One-time setup (already done in this repo)
+```bash
+npm install @capacitor/core @capacitor/haptics @capacitor/splash-screen @capacitor/status-bar
+npm install --save-dev @capacitor/cli
+npm install @capacitor/ios @capacitor/android
+npx cap add ios
+npx cap add android
+```
+This created the `ios/` and `android/` native project folders (commit these) and `capacitor.config.ts`, `out/` (a placeholder `webDir` — required by the CLI, but its contents are never actually shown since `server.url` takes over immediately).
+
+### Updating `capacitor.config.ts`
+`server.url` points at `https://vital-minds.vercel.app`. If the production domain ever changes, update it there. For testing against a local dev server on a physical device, temporarily set `server.url` to `http://<your-LAN-IP>:3000` while `npm run dev` is running (your phone and computer need to be on the same network), then change it back before shipping.
+
+### Building & running
+```bash
+npx cap sync        # re-copies webDir + updates native plugins after any config/plugin change
+npx cap open android # opens the project in Android Studio
+npx cap open ios     # opens the project in Xcode (macOS only)
+```
+
+- **Android**: works fully on Windows/Linux/macOS. Requires [Android Studio](https://developer.android.com/studio). From Android Studio you can run on an emulator or a USB-connected device, and later build a signed release for the Play Console.
+- **iOS**: requires **Xcode, which only runs on macOS**. If you're on Windows, you'll need either a Mac, a cloud Mac build service (e.g. Codemagic, Ionic Appflow), or a colleague's machine to open `ios/App/App.xcworkspace`, run `pod install` (the CLI already tried once and skipped it since CocoaPods isn't installed on this machine), and produce a signed build.
+
+### App store prerequisites (not something the CLI can do for you)
+- **Apple Developer Program** — $99/year, needed for TestFlight and App Store submission.
+- **Google Play Console** — $25 one-time, needed for Play Store submission.
+- A real app icon (at least 1024×1024 PNG) — `public/manifest.json` currently references `/icon-192.png` and `/icon-512.png`, which don't exist yet in `public/`. Generate native icon/splash sizes from a source image with [`@capacitor/assets`](https://github.com/ionic-team/capacitor-assets) once you have one.
 
 ---
 

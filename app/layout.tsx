@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
+import NativeInit from '@/components/NativeInit'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-title" content="VitalMind" />
       </head>
       <body className={`${inter.className} bg-gray-50 text-gray-900 antialiased`}>
+        <NativeInit />
         {children}
         <script dangerouslySetInnerHTML={{
           __html: `if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})`
