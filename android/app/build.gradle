@@ -30,6 +30,16 @@ repositories {
     }
 }
 
+// The Cordova compat module (still bundled by Capacitor for legacy plugin
+// support even though this app uses none) pulls the old split
+// kotlin-stdlib-jdk7/jdk8 artifacts, while newer AndroidX libraries pull
+// the unified kotlin-stdlib (1.4+, which already contains that code).
+// Excluding the old split artifacts avoids a duplicate-class dexing error.
+configurations.all {
+    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
+    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+}
+
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
