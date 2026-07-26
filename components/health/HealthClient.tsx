@@ -9,6 +9,7 @@ import type { WellnessScoreBreakdown } from '@/lib/health/calculations'
 import { getBMICategory } from '@/lib/health/calculations'
 import FoodCamera from '@/components/health/FoodCamera'
 import WearableConnect from '@/components/health/WearableConnect'
+import WalkTracker, { type WalkSession } from '@/components/health/WalkTracker'
 
 const FIELDS = [
   { key: 'sleep_hours',   label: 'Sleep',        unit: 'hrs',   emoji: '😴', step: '0.5', min: '0',  max: '24',     placeholder: '7.5'  },
@@ -46,9 +47,11 @@ type Props = {
   currentHeight: number | null
   wearableConnected: boolean
   wearableLastSynced: string | null
+  walkSessions: WalkSession[]
 }
 
-export default function HealthClient({ userId, todayMetrics, history, wellnessScore, bmi, currentHeight, wearableConnected, wearableLastSynced }: Props) {
+export default function HealthClient({ userId, todayMetrics, history, wellnessScore, bmi, currentHeight, wearableConnected, wearableLastSynced, walkSessions: initialWalkSessions }: Props) {
+  const [walkSessions, setWalkSessions] = useState<WalkSession[]>(initialWalkSessions)
   const [form, setForm] = useState({
     sleep_hours:   todayMetrics?.sleep_hours   || '',
     sleep_quality: todayMetrics?.sleep_quality || '',
@@ -174,6 +177,15 @@ export default function HealthClient({ userId, todayMetrics, history, wellnessSc
         </div>
       </div>
 
+      {/* Walk tracker */}
+      <div className="mb-6">
+        <WalkTracker
+          userId={userId}
+          sessions={walkSessions}
+          onSaved={(session) => setWalkSessions(prev => [session, ...prev])}
+        />
+      </div>
+
       {/* Log form */}
       <div className="glass rounded-2xl p-5 mb-6 card-in stagger-2">
         <div className="flex items-center gap-2 mb-4">
@@ -224,6 +236,7 @@ export default function HealthClient({ userId, todayMetrics, history, wellnessSc
         </div>
         <p className="text-xs text-warm-400 mb-3">Snap a photo of your meal — AI estimates calories & macros instantly.</p>
         <FoodCamera
+          userId={userId}
           entries={nutritionEntries}
           onLogged={async (entry) => {
             const updated = [...nutritionEntries, entry]

@@ -1,7 +1,8 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
-import { Loader2, Utensils, Plus, Trash2 } from 'lucide-react'
+import { Loader2, Utensils, Trash2, Camera as CameraIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
 
 type NutritionEntry = {
   meal: string
@@ -10,15 +11,18 @@ type NutritionEntry = {
   carbs: number
   fat: number
   logged_at: string
+  photo_path?: string | null
 }
 
 type Props = {
+  userId: string
   entries: NutritionEntry[]
   onLogged: (entry: NutritionEntry) => void
   onDelete?: (index: number) => void
 }
 
 const MACRO_GOALS = { calories: 2000, protein: 150, carbs: 250, fat: 65 }
+const PHOTO_BUCKET = 'meal-photos'
 
 type RingVariant = 'protein' | 'carbs' | 'fat'
 
@@ -65,7 +69,31 @@ function MacroRing({
   )
 }
 
-export default function FoodCamera({ entries, onLogged, onDelete }: Props) {
+// Meal thumbnail — bucket is private, so each entry's signed URL is fetched
+// lazily and cached in local state rather than stored (signed URLs expire).
+function MealThumbnail({ path }: { path: string }) {
+  const [url, setUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    createClient().storage.from(PHOTO_BUCKET).createSignedUrl(path, 3600).then(({ data }) => {
+      if (!cancelled && data) setUrl(data.signedUrl)
+    })
+    return () => { cancelled = true }
+  }, [path])
+
+  if (!url) {
+    return (
+      <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+        <Utensils className="w-3.5 h-3.5 text-amber-500" />
+      </div>
+    )
+  }
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={url} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" />
+}
+
+export default function FoodCamera({ userId, entries, onLogged, onDelete }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
   const inputRef   = useRef<HTMLInputElement>(null)
@@ -88,26 +116,76 @@ export default function FoodCamera({ entries, onLogged, onDelete }: Props) {
     calTrackRef.current?.style.setProperty('--cal-pct', `${calPct}%`)
   }, [calPct])
 
+  async function capture() {
+    setError('')
+    const { Capacitor } = await import('@capacitor/core')
+    if (!Capacitor.isNativePlatform()) {
+      inputRef.current?.click()
+      return
+    }
+    setLoading(true)
+    try {
+      const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera')
+      const photo = await Camera.getPhoto({
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Camera,
+        quality: 80,
+      })
+      if (!photo.base64String) throw new Error('No photo data')
+      await processPhoto(photo.base64String, `image/${photo.format || 'jpeg'}`)
+    } catch (err: any) {
+      // User cancelling the native camera sheet throws too — don't show an error for that.
+      if (err?.message !== 'User cancelled photos app') {
+        setError('Could not capture photo. Try again.')
+      }
+      setLoading(false)
+    }
+  }
+
   async function handleFile(file: File) {
     if (!file) return
     setLoading(true)
     setError('')
-
     try {
       const base64 = await toBase64(file)
-      const res = await fetch('/api/nutrition', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64, mimeType: file.type }),
-      })
-      if (!res.ok) throw new Error('Analysis failed')
-      const data = await res.json()
-      onLogged(data)
+      await processPhoto(base64, file.type)
+    } finally {
+      if (inputRef.current) inputRef.current.value = ''
+    }
+  }
+
+  async function processPhoto(base64: string, mimeType: string) {
+    try {
+      const [nutritionRes, photoPath] = await Promise.all([
+        fetch('/api/nutrition', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: base64, mimeType }),
+        }).then(res => {
+          if (!res.ok) throw new Error('Analysis failed')
+          return res.json()
+        }),
+        uploadPhoto(base64, mimeType),
+      ])
+      onLogged({ ...nutritionRes, photo_path: photoPath })
     } catch {
       setError('Could not analyse the photo. Try a clearer image.')
     } finally {
       setLoading(false)
-      if (inputRef.current) inputRef.current.value = ''
+    }
+  }
+
+  async function uploadPhoto(base64: string, mimeType: string): Promise<string | null> {
+    try {
+      const ext = mimeType.split('/')[1] || 'jpg'
+      const path = `${userId}/${crypto.randomUUID()}.${ext}`
+      const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
+      const { error: uploadError } = await createClient().storage
+        .from(PHOTO_BUCKET)
+        .upload(path, bytes, { contentType: mimeType })
+      return uploadError ? null : path
+    } catch {
+      return null // AI macros still get logged even if the photo upload fails
     }
   }
 
@@ -120,9 +198,17 @@ export default function FoodCamera({ entries, onLogged, onDelete }: Props) {
     })
   }
 
+  async function handleDelete(index: number) {
+    const entry = entries[index]
+    if (entry?.photo_path) {
+      await createClient().storage.from(PHOTO_BUCKET).remove([entry.photo_path])
+    }
+    onDelete?.(index)
+  }
+
   return (
     <div className="space-y-4">
-      {/* Visually hidden — triggered by the button below */}
+      {/* Web fallback — triggered by capture() when not running natively */}
       <label className="sr-only" htmlFor="meal-photo-input">Upload meal photo for nutrition analysis</label>
       <input
         id="meal-photo-input"
@@ -176,9 +262,13 @@ export default function FoodCamera({ entries, onLogged, onDelete }: Props) {
               key={i}
               className="flex items-center gap-3 p-3 rounded-xl bg-white border border-warm-100 group hover:border-amber-200 transition-colors"
             >
-              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
-                <Utensils className="w-3.5 h-3.5 text-amber-500" />
-              </div>
+              {e.photo_path
+                ? <MealThumbnail path={e.photo_path} />
+                : (
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+                    <Utensils className="w-3.5 h-3.5 text-amber-500" />
+                  </div>
+                )}
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-warm-800 capitalize truncate">{e.meal}</p>
                 <div className="flex gap-2 mt-0.5 flex-wrap">
@@ -194,7 +284,7 @@ export default function FoodCamera({ entries, onLogged, onDelete }: Props) {
               {onDelete && (
                 <button
                   type="button"
-                  onClick={() => onDelete(i)}
+                  onClick={() => handleDelete(i)}
                   className="opacity-0 group-hover:opacity-100 p-1 text-warm-200 hover:text-red-400 transition-all ml-1"
                   aria-label="Remove meal"
                 >
@@ -209,13 +299,13 @@ export default function FoodCamera({ entries, onLogged, onDelete }: Props) {
       {/* Log button */}
       <button
         type="button"
-        onClick={() => inputRef.current?.click()}
+        onClick={capture}
         disabled={loading}
         className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold border-2 border-dashed border-amber-200 text-amber-600 bg-amber-50/40 hover:bg-amber-50 hover:border-amber-300 transition-colors disabled:opacity-50"
       >
         {loading
           ? <Loader2 className="w-4 h-4 animate-spin" />
-          : <Plus className="w-4 h-4" />
+          : <CameraIcon className="w-4 h-4" />
         }
         {loading ? 'Analysing photo…' : entries.length === 0 ? 'Log first meal from photo' : 'Add another meal'}
       </button>

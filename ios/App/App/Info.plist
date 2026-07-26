@@ -45,5 +45,11 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>VitalMind uses your location to track walk distance while the app is open.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>VitalMind uses your camera to log meal photos for nutrition tracking.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>VitalMind can save meal photos to your library if you choose to.</string>
 </dict>
 </plist>

@@ -8,7 +8,9 @@ export async function POST(req: Request) {
     const dataUrl = `data:${mimeType || 'image/jpeg'};base64,${imageBase64}`
 
     const response = await groq.chat.completions.create({
-      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      // meta-llama/llama-4-scout-17b-16e-instruct was deprecated by Groq
+      // (June 2026); qwen/qwen3.6-27b is their current vision-capable model.
+      model: 'qwen/qwen3.6-27b',
       max_tokens: 300,
       response_format: { type: 'json_object' },
       messages: [
