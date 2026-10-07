@@ -9,6 +9,7 @@ import type { WellnessScoreBreakdown } from '@/lib/health/calculations'
 import { getBMICategory } from '@/lib/health/calculations'
 import FoodCamera from '@/components/health/FoodCamera'
 import WearableConnect from '@/components/health/WearableConnect'
+import PhoneHealthConnect from '@/components/health/PhoneHealthConnect'
 import WalkTracker, { type WalkSession } from '@/components/health/WalkTracker'
 
 const FIELDS = [
@@ -127,10 +128,16 @@ export default function HealthClient({ userId, todayMetrics, history, wellnessSc
 
       {/* Wearable connect card */}
       <div className="mb-6">
-        <WearableConnect
-          connected={wearableConnected}
-          lastSynced={wearableLastSynced}
-          onSynced={() => window.location.reload()}
+        <PhoneHealthConnect
+          userId={userId}
+          todayMetrics={todayMetrics}
+          fallback={
+            <WearableConnect
+              connected={wearableConnected}
+              lastSynced={wearableLastSynced}
+              onSynced={() => window.location.reload()}
+            />
+          }
         />
       </div>
 

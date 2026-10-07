@@ -4,4 +4,6 @@
     <string name="title_activity_main">VitalMind</string>
     <string name="package_name">com.vitalmind.app</string>
     <string name="custom_url_scheme">com.vitalmind.app</string>
+    <!-- Shown by Health Connect when the user taps "Privacy policy" in its permission sheet -->
+    <string name="health_connect_privacy_policy_url">https://vital-minds.vercel.app/privacy</string>
 </resources>

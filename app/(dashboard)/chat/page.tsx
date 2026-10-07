@@ -73,12 +73,60 @@ export default function ChatPage() {
   const bottomRef   = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  const nativeVoiceRef = useRef(false)
+
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     setVoiceSupported(!!SpeechRecognition)
+    // App WebViews (Android especially) have no Web Speech API — use the
+    // phone's own speech recognizer through the native plugin instead.
+    ;(async () => {
+      const { Capacitor } = await import('@capacitor/core')
+      if (!Capacitor.isNativePlatform()) return
+      const { SpeechRecognition: NativeSpeech } = await import('@capacitor-community/speech-recognition')
+      const { available } = await NativeSpeech.available().catch(() => ({ available: false }))
+      if (available) { nativeVoiceRef.current = true; setVoiceSupported(true) }
+    })()
   }, [])
 
+  async function toggleNativeVoice() {
+    const { SpeechRecognition: NativeSpeech } = await import('@capacitor-community/speech-recognition')
+    if (isListening) {
+      await NativeSpeech.stop().catch(() => {})
+      return
+    }
+    const perm = await NativeSpeech.requestPermissions().catch(() => null)
+    if (perm?.speechRecognition !== 'granted') {
+      setVoiceError('Microphone blocked — allow it for VitalMind in your phone settings.')
+      setTimeout(() => setVoiceError(''), 4000)
+      return
+    }
+    await NativeSpeech.removeAllListeners()
+    let latest = ''
+    await NativeSpeech.addListener('partialResults', ({ matches }) => {
+      latest = matches?.[0] ?? latest
+      setInterimText(latest)
+    })
+    await NativeSpeech.addListener('listeningState', ({ status }) => {
+      if (status === 'stopped') {
+        if (latest.trim()) setInput(prev => prev + (prev ? ' ' : '') + latest.trim())
+        latest = ''
+        setInterimText('')
+        setIsListening(false)
+      }
+    })
+    setVoiceError('')
+    setIsListening(true)
+    NativeSpeech.start({ language: 'en-US', partialResults: true, popup: false }).catch(() => {
+      setIsListening(false)
+      setInterimText('')
+      setVoiceError('Voice input failed. Please try again.')
+      setTimeout(() => setVoiceError(''), 4000)
+    })
+  }
+
   function toggleVoice() {
+    if (nativeVoiceRef.current) { toggleNativeVoice(); return }
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognition) return
 
@@ -213,7 +261,11 @@ export default function ChatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: apiMessages, sessionType, sessionId: currentSessionId }),
       })
-      const reader  = res.body!.getReader()
+      if (!res.ok || !res.body) {
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.error || (res.status === 401 ? 'Your session expired — please sign in again.' : `AI request failed (${res.status})`))
+      }
+      const reader  = res.body.getReader()
       const decoder = new TextDecoder()
       let buffer    = ''
 
@@ -260,10 +312,10 @@ export default function ChatPage() {
       })
 
       refreshSessions()
-    } catch {
+    } catch (e: any) {
       setMessages(prev => {
         const updated = [...prev]
-        updated[updated.length - 1].content = 'Something went wrong. Please try again.'
+        updated[updated.length - 1].content = e?.message || 'Something went wrong. Please try again.'
         return updated
       })
     } finally { setLoading(false) }

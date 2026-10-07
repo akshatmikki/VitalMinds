@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { groq, MODEL, buildSystemPrompt, analyzeEmotion, detectCrisisSignals } from '@/lib/ai/groq'
+import { groq, MODEL, buildSystemPrompt, analyzeEmotion, detectCrisisSignals, aiErrorMessage } from '@/lib/ai/groq'
 import { awardXP, updateStreak } from '@/lib/gamification'
 
 export const runtime = 'edge'
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       supabase.from('mood_logs').select('score, note').eq('user_id', user.id)
         .order('logged_at', { ascending: false }).limit(7),
       supabase.from('health_metrics')
-        .select('date, sleep_hours, steps, water_ml, weight_kg')
+        .select('*')
         .eq('user_id', user.id)
         .gte('date', sevenDaysAgo)
         .order('date', { ascending: false }),
@@ -122,6 +122,6 @@ export async function POST(req: Request) {
     })
   } catch (error: any) {
     console.error('Chat API error:', error)
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    return new Response(JSON.stringify({ error: aiErrorMessage(error) }), { status: 500 })
   }
 }

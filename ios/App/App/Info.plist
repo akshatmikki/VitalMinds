@@ -49,6 +49,14 @@
 	<string>VitalMind uses your location to track walk distance while the app is open.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>VitalMind uses your camera to log meal photos for nutrition tracking.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>VitalMind reads your steps, walking distance, sleep, heart rate and weight from Apple Health to track your wellness automatically.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>VitalMind does not write to Apple Health; this permission is only requested by the health integration library.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>VitalMind uses the microphone so you can talk to your AI companion.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>VitalMind converts your speech to text so you can talk to your AI companion.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>VitalMind can save meal photos to your library if you choose to.</string>
 </dict>

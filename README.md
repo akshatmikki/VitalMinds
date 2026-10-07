@@ -107,6 +107,16 @@ Two workflows in `.github/workflows/` build installable app files on GitHub's ow
 
   If you'd rather have a properly signed build with a 1-year expiry (and a path to TestFlight later), get an Apple Developer Program membership ($99/yr) and let me know — the workflow can be extended to sign in CI once you have a distribution certificate, provisioning profile, and your device's UDID registered.
 
+### Automatic tracking from the phone (steps, walking, sleep, heart rate)
+
+In the native app, the Health page's **Phone tracking** card replaces the Google Fit card (Google blocks its OAuth sign-in inside app WebViews, so Google Fit stays web-only).
+
+- **Health Connect (Android) / Apple Health (iOS)** via `@capgo/capacitor-health` — reads daily steps, walking distance, active calories, sleep, average heart rate and weight. iPhones count steps on their own; on Android the steps come from whatever writes to Health Connect (Google Fit, Samsung Health, Fitbit, most watch apps — install Google Fit if nothing does yet).
+- **Sleep from phone usage (Android)** — `PhoneUsagePlugin.java` reads screen on/off history (needs the "Usage access" special permission), and `lib/health/phone-health.ts` estimates sleep as the longest overnight screen-off stretch, ignoring quick checks under 5 minutes. A real sleep tracker's data always wins over this estimate, and sleep the user typed in by hand is never overwritten.
+- `components/health/PhoneHealthAutoSync.tsx` (in the dashboard layout) re-syncs the last 7 days whenever the app is opened or brought back to the foreground, at most every 15 minutes. Everything lands in `health_metrics`, so the wellness score, charts and AI companion all use it.
+- Run `supabase/migrations/015_phone_health.sql` for the extra columns (distance, calories, heart rate, sleep source). Without it, sync still works but only saves steps, sleep and weight.
+- iOS: HealthKit needs the `App/App.entitlements` capability to be signed into the app. Xcode or a paid developer account does this; free Sideloadly signing may not keep it.
+
 ### App store prerequisites (not something the CLI can do for you)
 - **Apple Developer Program** — $99/year, needed for TestFlight and App Store submission.
 - **Google Play Console** — $25 one-time, needed for Play Store submission.
