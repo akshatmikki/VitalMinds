@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/ui/Sidebar'
 import MobileNav from '@/components/ui/MobileNav'
 import MobileHeader from '@/components/ui/MobileHeader'
+import PhoneHealthAutoSync from '@/components/health/PhoneHealthAutoSync'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getUser()
@@ -27,6 +28,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </main>
       </div>
       <MobileNav />
+      <PhoneHealthAutoSync userId={user.id} />
     </div>
   )
 }

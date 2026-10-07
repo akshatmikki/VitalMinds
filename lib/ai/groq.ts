@@ -5,6 +5,20 @@ export const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
 export const MODEL = 'llama-3.1-8b-instant'
 
+// Turns provider failures into something a user (or the app's owner) can act
+// on, instead of a raw SDK dump or a silently empty chat bubble.
+export function aiErrorMessage(error: any): string {
+  const status = error?.status ?? error?.response?.status
+  const text = String(error?.message ?? '')
+  if (!process.env.GROQ_API_KEY) return 'AI is not set up yet: GROQ_API_KEY is missing on the server.'
+  if (status === 401 || /invalid_api_key|invalid api key/i.test(text)) {
+    return 'AI is unavailable: the server GROQ_API_KEY is invalid or revoked. Create a new key at console.groq.com and update it in Vercel.'
+  }
+  if (status === 429) return 'The AI is getting a lot of requests right now — please try again in a minute.'
+  if (status === 404 || /model.*(not found|decommissioned)/i.test(text)) return `AI model "${MODEL}" is no longer available — update MODEL in lib/ai/groq.ts.`
+  return 'The AI had trouble responding. Please try again.'
+}
+
 type HealthContext = {
   healthMetrics: Array<{
     date: string
@@ -12,6 +26,10 @@ type HealthContext = {
     steps?: number | null
     water_ml?: number | null
     weight_kg?: number | null
+    distance_m?: number | null
+    heart_rate_avg?: number | null
+    active_calories?: number | null
+    sleep_source?: string | null
   }>
   habits: Array<{ id: string; name: string }>
   completedHabitIds: string[]
@@ -78,8 +96,13 @@ Each option under 6 words.`,
 Recent health data (last 7 days):
 - Wellness score: ${scores.overall}/100 (sleep ${scores.sleep}, steps ${scores.steps}, hydration ${scores.hydration}, habits ${scores.habits}, mood ${scores.mood})
 - Trend: ${scores.trend}
-- Most recent sleep: ${todayMetrics.sleep_hours != null ? `${todayMetrics.sleep_hours}h` : 'not logged'}
-- Most recent steps: ${todayMetrics.steps != null ? todayMetrics.steps.toLocaleString() : 'not logged'}
+- Most recent sleep: ${todayMetrics.sleep_hours != null ? `${todayMetrics.sleep_hours}h${todayMetrics.sleep_source === 'phone_usage' ? ' (estimated from phone screen-off time)' : todayMetrics.sleep_source === 'health' ? ' (tracked automatically)' : ''}` : 'not logged'}
+- Most recent steps: ${todayMetrics.steps != null ? todayMetrics.steps.toLocaleString() : 'not logged'}${todayMetrics.distance_m != null ? `
+- Walking distance: ${(todayMetrics.distance_m / 1000).toFixed(1)} km` : ''}${todayMetrics.active_calories != null ? `
+- Active calories: ${todayMetrics.active_calories} kcal` : ''}${todayMetrics.heart_rate_avg != null ? `
+- Average heart rate: ${todayMetrics.heart_rate_avg} bpm` : ''}
+- 7-day steps: ${healthContext.healthMetrics.map(m => m.steps ?? '–').join(', ')} (newest first)
+- 7-day sleep hours: ${healthContext.healthMetrics.map(m => m.sleep_hours ?? '–').join(', ')} (newest first)
 - Most recent water: ${todayMetrics.water_ml != null ? `${todayMetrics.water_ml}ml` : 'not logged'}
 - Habits today: ${completedCount}/${totalHabits} completed${completedNames.length ? ` (${completedNames.join(', ')})` : ''}${bmi != null ? `\n- BMI: ${bmi}` : ''}`
   }

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:allowBackup="true"
@@ -41,4 +42,12 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Voice input for the AI chat (@capacitor-community/speech-recognition) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Screen on/off history for estimating sleep from phone usage (PhoneUsagePlugin).
+         A special permission the user grants in Settings > Usage access. -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+    <!-- Health Connect permissions (steps, sleep, heart rate...) are merged in
+         from @capgo/capacitor-health's own manifest. -->
 </manifest>
