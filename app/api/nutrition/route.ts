@@ -1,4 +1,4 @@
-import { groq } from '@/lib/ai/groq'
+import { groq, MODEL } from '@/lib/ai/groq'
 
 export async function POST(req: Request) {
   try {
@@ -8,9 +8,9 @@ export async function POST(req: Request) {
     const dataUrl = `data:${mimeType || 'image/jpeg'};base64,${imageBase64}`
 
     const response = await groq.chat.completions.create({
-      // meta-llama/llama-4-scout-17b-16e-instruct was deprecated by Groq
-      // (June 2026); qwen/qwen3.6-27b is their current vision-capable model.
-      model: 'qwen/qwen3.6-27b',
+      // MODEL is vision-capable (see lib/ai/groq.ts); qwen/qwen3.6-27b was
+      // shut down by Groq on 2026-09-14.
+      model: MODEL,
       max_tokens: 300,
       response_format: { type: 'json_object' },
       messages: [

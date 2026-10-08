@@ -3,7 +3,7 @@
 Your AI-powered mental, physical, and emotional wellness companion. Built with Next.js, Supabase, and Groq (free AI).
 
 ## Features
-- 🤖 **AI Companion** — streaming chat with Groq (Llama 3.1, free tier)
+- 🤖 **AI Companion** — streaming chat with Groq (free tier)
 - 📊 **Mood tracking** — daily check-ins with trend charts
 - 📖 **Journal** — guided prompts with AI reflections
 - ✅ **Habit tracker** — daily habits with streaks
@@ -13,7 +13,7 @@ Your AI-powered mental, physical, and emotional wellness companion. Built with N
 ## Tech Stack
 - **Frontend:** Next.js 14 (App Router), TypeScript, Tailwind CSS
 - **Database:** Supabase (Postgres + Auth + Realtime)
-- **AI:** Groq API (free) with Llama 3.1
+- **AI:** Groq API (free)
 - **Deployment:** Vercel (free Hobby plan)
 - **Mobile:** Capacitor (native iOS/Android shell over the live web app — see [Mobile app](#mobile-app-ios--android-via-capacitor))
 
@@ -153,10 +153,7 @@ supabase/
 ## Customization
 
 ### Change AI model
-In `lib/ai/groq.ts`, change `MODEL`:
-- `llama-3.1-8b-instant` — fastest, free
-- `llama-3.1-70b-versatile` — smarter, still free
-- `mixtral-8x7b-32768` — longer context
+In `lib/ai/groq.ts`, change `MODEL`. It's currently `qwen/qwen3.8-27b`, which handles both chat and meal photos. Groq retires models every few months, and the app then shows "AI model … is no longer available". Pick a current model from [Groq's deprecations page](https://console.groq.com/docs/deprecations). If the new model doesn't accept images, give `app/api/nutrition/route.ts` its own vision model.
 
 ### Add crisis resources
 Edit `buildSystemPrompt` in `lib/ai/groq.ts`
