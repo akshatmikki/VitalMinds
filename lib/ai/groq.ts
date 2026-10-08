@@ -1,9 +1,33 @@
 import Groq from 'groq-sdk'
 import { calcWellnessScore, calcBMI } from '@/lib/health/calculations'
 
-export const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+const client = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
-export const MODEL = 'llama-3.1-8b-instant'
+// Groq retires models every few months — check
+// https://console.groq.com/docs/deprecations when the AI starts erroring.
+// llama-3.1-8b-instant was shut down 2026-08-16. qwen3.8-27b also accepts
+// images, so the meal-photo nutrition estimate uses it too.
+export const MODEL = 'qwen/qwen3.8-27b'
+
+// Qwen 3.x "thinks" before answering by default, and those hidden tokens eat
+// into max_tokens — the 60–80 token classifiers would come back empty.
+// reasoning_effort "none" switches it to plain instruct mode. Applied here so
+// every call site keeps its existing max_tokens budget unchanged. (Cast:
+// groq-sdk 0.5's types predate the reasoning_effort parameter.)
+const create = client.chat.completions.create.bind(client.chat.completions)
+export const groq = {
+  chat: {
+    completions: {
+      create: ((params: any, options?: any) =>
+        create(
+          String(params.model).startsWith('qwen/') && params.reasoning_effort === undefined
+            ? { ...params, reasoning_effort: 'none' }
+            : params,
+          options,
+        )) as typeof client.chat.completions.create,
+    },
+  },
+}
 
 // Turns provider failures into something a user (or the app's owner) can act
 // on, instead of a raw SDK dump or a silently empty chat bubble.
